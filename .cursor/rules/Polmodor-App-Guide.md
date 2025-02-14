@@ -1,0 +1,515 @@
+# Polmodor iOS Native Implementation Guide
+
+## Project Structure
+
+```plaintext
+Polmodor/
+├── Sources/
+│   ├── App/
+│   │   ├── AppDelegate.swift
+│   │   ├── SceneDelegate.swift
+│   │   └── Info.plist
+│   ├── Features/
+│   │   ├── Timer/
+│   │   │   ├── Views/
+│   │   │   │   ├── TimerView.swift
+│   │   │   │   ├── TimerCircleView.swift
+│   │   │   │   └── TimerControlsView.swift
+│   │   │   ├── ViewModels/
+│   │   │   │   └── TimerViewModel.swift
+│   │   │   └── Models/
+│   │   │       └── PomodoroState.swift
+│   │   ├── Tasks/
+│   │   │   ├── Views/
+│   │   │   │   ├── TaskListView.swift
+│   │   │   │   └── TaskDetailView.swift
+│   │   │   ├── ViewModels/
+│   │   │   │   └── TaskViewModel.swift
+│   │   │   └── Models/
+│   │   │       └── Task.swift
+│   │   └── Settings/
+│   │       ├── Views/
+│   │       ├── ViewModels/
+│   │       └── Models/
+│   ├── Core/
+│   │   ├── Extensions/
+│   │   │   ├── Color+Extensions.swift
+│   │   │   └── Date+Extensions.swift
+│   │   ├── Protocols/
+│   │   │   ├── TimerServiceProtocol.swift
+│   │   │   └── TaskServiceProtocol.swift
+│   │   └── Utilities/
+│   │       ├── Constants.swift
+│   │       └── Helpers.swift
+│   ├── UI/
+│   │   ├── Components/
+│   │   │   ├── CircularProgressView.swift
+│   │   │   └── CustomButton.swift
+│   │   ├── Theme/
+│   │   │   ├── PolmodorTheme.swift
+│   │   │   └── ThemeManager.swift
+│   │   └── Resources/
+│   │       ├── Colors.xcassets
+│   │       └── Fonts/
+│   └── Services/
+│       ├── TimerService/
+│       ├── TaskService/
+│       └── WidgetService/
+└── Widget/
+    ├── PolmodorWidget.swift
+    ├── Views/
+    └── Models/
+```
+
+## Core Features Implementation
+
+### 1. Timer Feature
+
+```swift
+// Models/PomodoroState.swift
+enum PomodoroState {
+    case work
+    case shortBreak
+    case longBreak
+
+    var duration: TimeInterval {
+        switch self {
+        case .work: return 25 * 60
+        case .shortBreak: return 5 * 60
+        case .longBreak: return 15 * 60
+        }
+    }
+}
+
+// ViewModels/TimerViewModel.swift
+class TimerViewModel: ObservableObject {
+    @Published private(set) var state: PomodoroState = .work
+    @Published private(set) var isRunning = false
+    @Published private(set) var progress: Double = 0
+
+    private var timerService: TimerServiceProtocol
+    private var cancellables = Set<AnyCancellable>()
+
+    init(timerService: TimerServiceProtocol = TimerService()) {
+        self.timerService = timerService
+        setupBindings()
+    }
+
+    private func setupBindings() {
+        timerService.progressPublisher
+            .assign(to: &$progress)
+
+        timerService.statePublisher
+            .assign(to: &$state)
+    }
+
+    func startTimer() {
+        timerService.start()
+    }
+
+    func pauseTimer() {
+        timerService.pause()
+    }
+}
+
+// Views/TimerView.swift
+struct TimerView: View {
+    @StateObject private var viewModel = TimerViewModel()
+
+    var body: some View {
+        VStack(spacing: 20) {
+            TimerCircleView(
+                progress: viewModel.progress,
+                state: viewModel.state
+            )
+
+            TimerControlsView(
+                isRunning: viewModel.isRunning,
+                onStart: viewModel.startTimer,
+                onPause: viewModel.pauseTimer
+            )
+        }
+        .padding()
+    }
+}
+```
+
+### 2. Task Management
+
+```swift
+// Models/Task.swift
+struct Task: Identifiable, Codable {
+    let id: UUID
+    var title: String
+    var pomodoroCount: Int
+    var completedPomodoros: Int
+    var status: TaskStatus
+
+    enum TaskStatus: String, Codable {
+        case todo
+        case inProgress
+        case completed
+    }
+}
+
+// ViewModels/TaskViewModel.swift
+class TaskViewModel: ObservableObject {
+    @Published private(set) var tasks: [Task] = []
+    private let taskService: TaskServiceProtocol
+
+    init(taskService: TaskServiceProtocol = TaskService()) {
+        self.taskService = taskService
+        loadTasks()
+    }
+
+    private func loadTasks() {
+        taskService.fetchTasks()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] tasks in
+                self?.tasks = tasks
+            }
+            .store(in: &cancellables)
+    }
+
+    func addTask(_ task: Task) {
+        taskService.addTask(task)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.loadTasks()
+            }
+            .store(in: &cancellables)
+    }
+}
+
+// Views/TaskListView.swift
+struct TaskListView: View {
+    @StateObject private var viewModel = TaskViewModel()
+    @State private var showingAddTask = false
+
+    var body: some View {
+        List {
+            ForEach(viewModel.tasks) { task in
+                TaskRowView(task: task)
+            }
+            .onDelete(perform: deleteTask)
+        }
+        .navigationTitle("Tasks")
+        .toolbar {
+            Button("Add Task") {
+                showingAddTask = true
+            }
+        }
+        .sheet(isPresented: $showingAddTask) {
+            AddTaskView(viewModel: viewModel)
+        }
+    }
+}
+```
+
+### 3. Widget Implementation
+
+```swift
+// PolmodorWidget.swift
+struct PolmodorWidget: Widget {
+    private let kind: String = "PolmodorWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PolmodorTimelineProvider()) { entry in
+            PolmodorWidgetEntryView(entry: entry)
+        }
+        .configurationDisplayName("Polmodor Timer")
+        .description("Track your Pomodoro timer progress.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+// Live Activity
+struct PolmodorLiveActivity: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: PolmodorAttributes.self) { context in
+            LiveActivityView(context: context)
+        } dynamicIsland: { context in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    TimerStatusView(context: context)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    TimerControlsView(context: context)
+                }
+            } compactLeading: {
+                TimerLabel(context: context)
+            } compactTrailing: {
+                ProgressView(context: context)
+            } minimal: {
+                ProgressView(context: context)
+            }
+        }
+    }
+}
+```
+
+### 4. Theme System
+
+```swift
+// Theme/PolmodorTheme.swift
+struct PolmodorTheme {
+    static let shared = PolmodorTheme()
+
+    let colors = Colors()
+    let typography = Typography()
+    let layout = Layout()
+
+    struct Colors {
+        let timerColors = TimerColors()
+        let background = Color("BackgroundColor")
+        let text = Color("TextColor")
+
+        struct TimerColors {
+            let work = Color("WorkColor")
+            let shortBreak = Color("ShortBreakColor")
+            let longBreak = Color("LongBreakColor")
+        }
+    }
+
+    struct Typography {
+        let title = Font.system(.title, weight: .bold)
+        let body = Font.system(.body)
+        let timer = Font.custom("SFMono-Bold", size: 44)
+    }
+
+    struct Layout {
+        let padding = EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
+        let spacing: CGFloat = 20
+    }
+}
+
+// Components/StyledButton.swift
+struct StyledButton: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(PolmodorTheme.shared.typography.body)
+                .padding()
+                .background(PolmodorTheme.shared.colors.timerColors.work)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+        }
+    }
+}
+```
+
+## Core Data Integration
+
+```swift
+// Models/TaskModel.xcdatamodeld
+// Task Entity
+class TaskEntity: NSManagedObject {
+    @NSManaged public var id: UUID
+    @NSManaged public var title: String
+    @NSManaged public var pomodoroCount: Int32
+    @NSManaged public var completedPomodoros: Int32
+    @NSManaged public var status: String
+    @NSManaged public var createdAt: Date
+}
+
+// Services/TaskService.swift
+class TaskService: TaskServiceProtocol {
+    private let container: NSPersistentContainer
+
+    init() {
+        container = NSPersistentContainer(name: "TaskModel")
+        container.loadPersistentStores { description, error in
+            if let error = error {
+                fatalError("Failed to load Core Data stack: \(error)")
+            }
+        }
+    }
+
+    func fetchTasks() -> AnyPublisher<[Task], Error> {
+        let request: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
+
+        return Future { promise in
+            do {
+                let entities = try self.container.viewContext.fetch(request)
+                let tasks = entities.map { self.mapEntityToTask($0) }
+                promise(.success(tasks))
+            } catch {
+                promise(.failure(error))
+            }
+        }.eraseToAnyPublisher()
+    }
+}
+```
+
+## Essential Features
+
+1. Background Modes
+
+```swift
+// Info.plist
+<key>UIBackgroundModes</key>
+<array>
+    <string>audio</string>
+    <string>processing</string>
+</array>
+```
+
+2. Notifications
+
+```swift
+class NotificationManager {
+    static let shared = NotificationManager()
+
+    func scheduleTimerCompletion(for state: PomodoroState) {
+        let content = UNMutableNotificationContent()
+        content.title = "Timer Completed"
+        content.body = "Time for a \(state == .work ? "break" : "focus session")!"
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: state.duration, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+
+        UNUserNotificationCenter.current().add(request)
+    }
+}
+```
+
+3. Settings Storage
+
+```swift
+class SettingsManager {
+    static let shared = SettingsManager()
+
+    private let defaults = UserDefaults.standard
+
+    var workDuration: TimeInterval {
+        get { defaults.double(forKey: "workDuration") }
+        set { defaults.set(newValue, forKey: "workDuration") }
+    }
+
+    var shortBreakDuration: TimeInterval {
+        get { defaults.double(forKey: "shortBreakDuration") }
+        set { defaults.set(newValue, forKey: "shortBreakDuration") }
+    }
+}
+```
+
+## Testing Strategy
+
+```swift
+// Tests/TimerViewModelTests.swift
+class TimerViewModelTests: XCTestCase {
+    var sut: TimerViewModel!
+    var mockTimerService: MockTimerService!
+
+    override func setUp() {
+        super.setUp()
+        mockTimerService = MockTimerService()
+        sut = TimerViewModel(timerService: mockTimerService)
+    }
+
+    func testTimerStart() {
+        // Given
+        XCTAssertFalse(sut.isRunning)
+
+        // When
+        sut.startTimer()
+
+        // Then
+        XCTAssertTrue(sut.isRunning)
+        XCTAssertTrue(mockTimerService.startCalled)
+    }
+}
+
+// Tests/TaskServiceTests.swift
+class TaskServiceTests: XCTestCase {
+    var sut: TaskService!
+    var mockContainer: NSPersistentContainer!
+
+    override func setUp() {
+        super.setUp()
+        mockContainer = NSPersistentContainer(name: "TestTaskModel")
+        sut = TaskService(container: mockContainer)
+    }
+
+    func testAddTask() {
+        // Test implementation
+    }
+}
+```
+
+## Performance Optimization
+
+1. Timer Accuracy
+
+```swift
+class PreciseTimer {
+    private var displayLink: CADisplayLink?
+    private var lastUpdate: CFTimeInterval = 0
+
+    func start() {
+        displayLink = CADisplayLink(target: self, selector: #selector(update))
+        displayLink?.add(to: .current, forMode: .common)
+    }
+
+    @objc private func update(displayLink: CADisplayLink) {
+        let elapsed = displayLink.timestamp - lastUpdate
+        // Update timer logic
+    }
+}
+```
+
+2. Memory Management
+
+```swift
+extension TaskListView {
+    func cleanupCache() {
+        URLCache.shared.removeAllCachedResponses()
+        // Additional cleanup
+    }
+}
+```
+
+## App Store Guidelines
+
+1. Privacy
+
+```swift
+// Info.plist
+<key>NSUserNotificationsUsageDescription</key>
+<string>We need to send you notifications when your Pomodoro timer completes.</string>
+```
+
+2. Required Capabilities
+
+```swift
+// Info.plist
+<key>UIRequiredDeviceCapabilities</key>
+<array>
+    <string>armv7</string>
+</array>
+```
+
+## Best Practices
+
+1. Error Handling
+
+```swift
+enum PolmodorError: Error {
+    case timerError(String)
+    case taskError(String)
+    case persistenceError(String)
+
+    var localizedDescription: String {
+        switch self {
+        case .timerError(let message): return "Timer error: \(message)"
+        case .taskError(let message): return "Task error: \(message)"
+        case .persistenceError(let message): return "Database error: \(message)"
+        }
+    }
+}
+```

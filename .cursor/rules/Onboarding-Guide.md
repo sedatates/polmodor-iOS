@@ -1,0 +1,344 @@
+# SwiftUI Onboarding Development Guide
+
+## Table of Contents
+
+- [Screen Flow](#screen-flow)
+- [Design System](#design-system)
+- [Animation System](#animation-system)
+- [State Management](#state-management)
+- [Navigation](#navigation)
+- [Accessibility](#accessibility)
+- [Data Persistence](#data-persistence)
+- [Testing Guidelines](#testing-guidelines)
+
+## Screen Flow
+
+### Required Screens
+
+1. Welcome Screen (Initial)
+2. Feature Introduction Screens (3-4 screens)
+3. Timer Introduction Screen
+4. Task Management Introduction
+5. Final Setup Screen
+
+### Screen Transitions
+
+- Horizontal slide animation
+- Page control indicator
+- Skip option available
+- Progress indication
+
+### Content Guidelines
+
+```swift
+struct OnboardingContent {
+    let screens: [OnboardingScreen] = [
+        OnboardingScreen(
+            title: "Welcome to Polmodor",
+            description: "Boost your productivity with the Pomodoro Technique",
+            image: "welcome-illustration"
+        ),
+        OnboardingScreen(
+            title: "Focus Timer",
+            description: "Stay focused with our customizable timer",
+            image: "timer-illustration"
+        ),
+        OnboardingScreen(
+            title: "Task Management",
+            description: "Organize your tasks efficiently",
+            image: "tasks-illustration"
+        ),
+        OnboardingScreen(
+            title: "Track Progress",
+            description: "Monitor your productivity with detailed statistics",
+            image: "stats-illustration"
+        )
+    ]
+}
+```
+
+## Design System
+
+### Typography
+
+- Title: System 34pt Bold
+- Description: System 17pt Regular
+- Button Text: System 17pt Semibold
+
+### Color Palette
+
+```swift
+struct OnboardingColors {
+    static let primary = Color("Primary")          // #FF6B6B
+    static let secondary = Color("Secondary")      // #4DABF7
+    static let background = Color("Background")    // #FFFFFF
+    static let text = Color("TextPrimary")        // #1A1A1A
+    static let textSecondary = Color("TextSecondary") // #666666
+}
+```
+
+### Layout Guidelines
+
+- Safe area respecting
+- Dynamic type support
+- Proper spacing hierarchy
+- Responsive layout support
+
+## Animation System
+
+### Transition Animations
+
+```swift
+struct ScreenTransition: ViewModifier {
+    let offset: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .offset(x: offset)
+            .animation(.spring(
+                response: 0.3,
+                dampingFraction: 0.8,
+                blendDuration: 0
+            ), value: offset)
+    }
+}
+```
+
+### Content Animations
+
+- Fade in for text elements
+- Scale animation for illustrations
+- Spring effect for buttons
+- Smooth state transitions
+
+### Progress Indicator
+
+```swift
+struct PageControl: View {
+    let numberOfPages: Int
+    let currentPage: Int
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<numberOfPages, id: \.self) { page in
+                Circle()
+                    .fill(page == currentPage ?
+                          OnboardingColors.primary :
+                          OnboardingColors.primary.opacity(0.3))
+                    .frame(width: 8, height: 8)
+                    .animation(.easeInOut, value: currentPage)
+            }
+        }
+    }
+}
+```
+
+## State Management
+
+### OnboardingState
+
+```swift
+class OnboardingViewModel: ObservableObject {
+    @Published var currentPage: Int = 0
+    @Published var hasSeenOnboarding: Bool = false
+    @Published var isAnimating: Bool = false
+
+    let numberOfPages: Int
+
+    init(numberOfPages: Int = 4) {
+        self.numberOfPages = numberOfPages
+    }
+
+    func nextPage() {
+        withAnimation {
+            currentPage = min(currentPage + 1, numberOfPages - 1)
+        }
+    }
+
+    func skipOnboarding() {
+        withAnimation {
+            hasSeenOnboarding = true
+        }
+    }
+}
+```
+
+### User Preferences
+
+```swift
+class UserPreferences {
+    @AppStorage("hasCompletedOnboarding")
+    var hasCompletedOnboarding: Bool = false
+
+    func completeOnboarding() {
+        hasCompletedOnboarding = true
+    }
+}
+```
+
+## Navigation
+
+### Navigation Control
+
+- Swipe gesture support
+- Next/Back buttons
+- Skip functionality
+- Completion handling
+
+### Gesture Support
+
+```swift
+struct OnboardingView: View {
+    @StateObject private var viewModel: OnboardingViewModel
+
+    var body: some View {
+        content
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        handleSwipe(value)
+                    }
+            )
+    }
+
+    private func handleSwipe(_ value: DragGesture.Value) {
+        let horizontalAmount = value.translation.width
+        let threshold: CGFloat = 50
+
+        if abs(horizontalAmount) > threshold {
+            if horizontalAmount > 0 {
+                viewModel.previousPage()
+            } else {
+                viewModel.nextPage()
+            }
+        }
+    }
+}
+```
+
+## Accessibility
+
+### VoiceOver Support
+
+```swift
+.accessibilityLabel("Onboarding Screen \(currentPage + 1) of \(numberOfPages)")
+.accessibilityHint("Swipe left to continue, double tap to go to next screen")
+.accessibilityValue(Text(screenTitle))
+```
+
+### Dynamic Type
+
+- Support all text sizes
+- Maintain layout integrity
+- Proper text wrapping
+- Minimum touch targets
+
+### Reduced Motion
+
+```swift
+@Environment(\.accessibilityReduceMotion) var reduceMotion
+
+// When enabled:
+- Disable page transitions
+- Use fade instead of slide
+- Remove spring animations
+```
+
+## Data Persistence
+
+### UserDefaults Storage
+
+```swift
+extension UserDefaults {
+    private enum Keys {
+        static let hasSeenOnboarding = "hasSeenOnboarding"
+        static let lastSeenVersion = "lastSeenVersion"
+    }
+
+    var hasSeenOnboarding: Bool {
+        get { bool(forKey: Keys.hasSeenOnboarding) }
+        set { set(newValue, forKey: Keys.hasSeenOnboarding) }
+    }
+}
+```
+
+### Version Tracking
+
+- Track app version
+- Handle re-onboarding
+- Migration support
+
+## Testing Guidelines
+
+### Unit Tests
+
+```swift
+class OnboardingViewModelTests: XCTestCase {
+    var sut: OnboardingViewModel!
+
+    override func setUp() {
+        super.setUp()
+        sut = OnboardingViewModel()
+    }
+
+    func testNextPage() {
+        // Given
+        XCTAssertEqual(sut.currentPage, 0)
+
+        // When
+        sut.nextPage()
+
+        // Then
+        XCTAssertEqual(sut.currentPage, 1)
+    }
+}
+```
+
+### UI Tests
+
+- Screen transitions
+- Button interactions
+- Gesture handling
+- Accessibility features
+
+## Best Practices
+
+### Performance
+
+- Lazy loading for images
+- Proper memory management
+- Efficient animations
+- Cache management
+
+### Code Organization
+
+- MVVM architecture
+- Protocol-oriented design
+- Clear documentation
+- Proper encapsulation
+
+### Error Handling
+
+- Graceful degradation
+- User feedback
+- Logging
+- Recovery options
+
+## Resources
+
+- [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines)
+- [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui)
+- [iOS Accessibility Guide](https://developer.apple.com/accessibility/ios)
+
+## Implementation Checklist
+
+- [ ] Screen flow implementation
+- [ ] Design system setup
+- [ ] Animation system
+- [ ] State management
+- [ ] Navigation control
+- [ ] Accessibility support
+- [ ] Data persistence
+- [ ] Unit tests
+- [ ] UI tests
+- [ ] Documentation
