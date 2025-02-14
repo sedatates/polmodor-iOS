@@ -1,9 +1,14 @@
+---
+description: 
+globs: 
+---
+
 # Polmodor iOS Native Implementation Guide
 
 ## Project Structure
 
 ```plaintext
-Polmodor/
+polmodor/
 ├── Sources/
 │   ├── App/
 │   │   ├── AppDelegate.swift

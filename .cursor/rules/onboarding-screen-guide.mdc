@@ -1,15 +1,19 @@
+---
+description: 
+globs: 
+---
 # SwiftUI Onboarding Development Guide
 
 ## Table of Contents
 
-- [Screen Flow](#screen-flow)
-- [Design System](#design-system)
-- [Animation System](#animation-system)
-- [State Management](#state-management)
-- [Navigation](#navigation)
-- [Accessibility](#accessibility)
-- [Data Persistence](#data-persistence)
-- [Testing Guidelines](#testing-guidelines)
+- [Screen Flow](mdc:#screen-flow)
+- [Design System](mdc:#design-system)
+- [Animation System](mdc:#animation-system)
+- [State Management](mdc:#state-management)
+- [Navigation](mdc:#navigation)
+- [Accessibility](mdc:#accessibility)
+- [Data Persistence](mdc:#data-persistence)
+- [Testing Guidelines](mdc:#testing-guidelines)
 
 ## Screen Flow
 
@@ -326,9 +330,9 @@ class OnboardingViewModelTests: XCTestCase {
 
 ## Resources
 
-- [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines)
-- [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui)
-- [iOS Accessibility Guide](https://developer.apple.com/accessibility/ios)
+- [Human Interface Guidelines](mdc:https:/developer.apple.com/design/human-interface-guidelines)
+- [SwiftUI Documentation](mdc:https:/developer.apple.com/documentation/swiftui)
+- [iOS Accessibility Guide](mdc:https:/developer.apple.com/accessibility/ios)
 
 ## Implementation Checklist
 

@@ -1,0 +1,141 @@
+name: Polmodor
+options:
+  bundleIdPrefix: com
+  deploymentTarget:
+    iOS: 16.2
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+  usesTabs: true
+  indentWidth: 2
+  tabWidth: 2
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: K9878XM64L
+    MARKETING_VERSION: 1.0.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: 5.0
+    TARGETED_DEVICE_FAMILY: "1,2" # Universal (iPhone + iPad)
+    GENERATE_INFOPLIST_FILE: YES
+
+configs:
+  Debug: debug
+  Release: release
+
+targets:
+  Polmodor:
+    type: application
+    platform: iOS
+    supportedDestinations: [iOS]
+    sources:
+      - path: Polmodor
+        excludes:
+          - "**/*.md"
+          - "**/.DS_Store"
+    settings:
+      base:
+        INFOPLIST_FILE: Polmodor/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.polmodor
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_PREVIEWS: YES
+    info:
+      path: Polmodor/Info.plist
+      properties:
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        UILaunchStoryboardName: "LaunchScreen"
+        NSSupportsLiveActivities: true
+        UIBackgroundModes:
+          - remote-notification
+          - fetch
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - polmodor
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+
+  PolmodorTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PolmodorTests
+    dependencies:
+      - target: Polmodor
+    settings:
+      base:
+        INFOPLIST_FILE: PolmodorTests/Info.plist
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Polmodor.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Polmodor
+
+  PolmodorUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PolmodorUITests
+    dependencies:
+      - target: Polmodor
+    settings:
+      base:
+        INFOPLIST_FILE: PolmodorUITests/Info.plist
+
+  PolmodorWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: 16.2
+    sources:
+      - path: widget
+    dependencies:
+      - target: Polmodor
+    settings:
+      base:
+        INFOPLIST_FILE: widget/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.polmodor.widget
+        ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME: WidgetBackground
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: YES
+        ENABLE_PREVIEWS: YES
+        SKIP_INSTALL: YES
+        SWIFT_VERSION: 5.0
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+schemes:
+  Polmodor:
+    build:
+      targets:
+        Polmodor: all
+        PolmodorWidget: all
+      parallelizeBuild: true
+    run:
+      config: Debug
+      environmentVariables:
+        SWIFT_DEBUG_FULLPATH: YES
+    test:
+      config: Debug
+      targets:
+        - PolmodorTests
+        - PolmodorUITests
+      gatherCoverageData: true
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

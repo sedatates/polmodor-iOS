@@ -1,16 +1,21 @@
+---
+description: 
+globs: 
+---
+
 # SwiftUI Timer Animation Development Guide
 
 ## Table of Contents
 
-- [Model Configuration](#model-configuration)
-- [View Hierarchy](#view-hierarchy)
-- [Animation Specifications](#animation-specifications)
-- [Timer Logic](#timer-logic)
-- [Interaction Guidelines](#interaction-guidelines)
-- [Accessibility](#accessibility)
-- [Memory Management](#memory-management)
-- [Testing Guidelines](#testing-guidelines)
-- [Performance Guidelines](#performance-guidelines)
+- [Model Configuration](mdc:#model-configuration)
+- [View Hierarchy](mdc:#view-hierarchy)
+- [Animation Specifications](mdc:#animation-specifications)
+- [Timer Logic](mdc:#timer-logic)
+- [Interaction Guidelines](mdc:#interaction-guidelines)
+- [Accessibility](mdc:#accessibility)
+- [Memory Management](mdc:#memory-management)
+- [Testing Guidelines](mdc:#testing-guidelines)
+- [Performance Guidelines](mdc:#performance-guidelines)
 
 ## Model Configuration
 
@@ -50,6 +55,9 @@ The state enum must conform to `CaseIterable` and `Equatable` protocols, definin
 - Implement `GeometryReader` for responsive design
 - Support dark/light mode via `@Environment`
 - Maintain 1:1 aspect ratio using `.aspectRatio(1, contentMode: .fit)`
+- [timer-design.PNG](mdc:.cursor/rules/timer-design.PNG) is the figma design of desired design you should implement the exact design 
+
+
 
 ### Shape Requirements
 
@@ -295,6 +303,6 @@ struct TimerQuadrantShape: Shape {
 
 ## Resources
 
-- [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui)
-- [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines)
-- [Swift API Design Guidelines](https://swift.org/documentation/api-design-guidelines/)
+- [SwiftUI Documentation](mdc:https:/developer.apple.com/documentation/swiftui)
+- [Human Interface Guidelines](mdc:https:/developer.apple.com/design/human-interface-guidelines)
+- [Swift API Design Guidelines](mdc:https:/swift.org/documentation/api-design-guidelines)
