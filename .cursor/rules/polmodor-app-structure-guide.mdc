@@ -1,6 +1,6 @@
 ---
 description: 
-globs: 
+globs: **/*
 ---
 
 # Polmodor iOS Native Implementation Guide

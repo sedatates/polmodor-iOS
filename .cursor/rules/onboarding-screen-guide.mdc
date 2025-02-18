@@ -1,6 +1,6 @@
 ---
 description: 
-globs: 
+globs: Polmodor/Sources/Features/Onboarding/*
 ---
 # SwiftUI Onboarding Development Guide
 

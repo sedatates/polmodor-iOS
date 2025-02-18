@@ -2,22 +2,24 @@ name: Polmodor
 options:
   bundleIdPrefix: com
   deploymentTarget:
-    iOS: 16.2
+    iOS: 18.0
   createIntermediateGroups: true
   generateEmptyDirectories: true
   groupSortPosition: top
-  usesTabs: true
-  indentWidth: 2
-  tabWidth: 2
+  usesTabs: false
+  indentWidth: 4
+  tabWidth: 4
 
 settings:
   base:
     DEVELOPMENT_TEAM: K9878XM64L
     MARKETING_VERSION: 1.0.0
     CURRENT_PROJECT_VERSION: 1
-    SWIFT_VERSION: 5.0
-    TARGETED_DEVICE_FAMILY: "1,2" # Universal (iPhone + iPad)
+    SWIFT_VERSION: 5.9
+    TARGETED_DEVICE_FAMILY: "1,2"
     GENERATE_INFOPLIST_FILE: YES
+    ENABLE_BITCODE: NO
+    IPHONEOS_DEPLOYMENT_TARGET: 18.0
 
 configs:
   Debug: debug
@@ -27,7 +29,6 @@ targets:
   Polmodor:
     type: application
     platform: iOS
-    supportedDestinations: [iOS]
     sources:
       - path: Polmodor
         excludes:
@@ -41,6 +42,8 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
         ENABLE_PREVIEWS: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+
     info:
       path: Polmodor/Info.plist
       properties:
@@ -73,31 +76,40 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: PolmodorTests
+      - path: polmodorTests
+        excludes:
+          - "**/*.md"
+          - "**/.DS_Store"
     dependencies:
       - target: Polmodor
     settings:
       base:
-        INFOPLIST_FILE: PolmodorTests/Info.plist
+        INFOPLIST_FILE: polmodorTests/Info.plist
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Polmodor.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Polmodor
 
   PolmodorUITests:
     type: bundle.ui-testing
     platform: iOS
     sources:
-      - path: PolmodorUITests
+      - path: polmodorUITests
+        excludes:
+          - "**/*.md"
+          - "**/.DS_Store"
     dependencies:
       - target: Polmodor
     settings:
       base:
-        INFOPLIST_FILE: PolmodorUITests/Info.plist
+        INFOPLIST_FILE: polmodorUITests/Info.plist
 
   PolmodorWidget:
     type: app-extension
     platform: iOS
-    deploymentTarget: 16.2
+    deploymentTarget: 18.0
     sources:
       - path: widget
+        excludes:
+          - "**/*.md"
+          - "**/.DS_Store"
     dependencies:
       - target: Polmodor
     settings:
@@ -109,8 +121,9 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         ENABLE_PREVIEWS: YES
         SKIP_INSTALL: YES
-        SWIFT_VERSION: 5.0
+        SWIFT_VERSION: 5.9
         TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_STRICT_CONCURRENCY: complete
     info:
       properties:
         NSExtension:
