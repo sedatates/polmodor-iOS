@@ -12,16 +12,8 @@ A minimal and elegant Pomodoro timer app for iOS, built with SwiftUI. Polmodor h
 
 ## Requirements
 
-- iOS 16.0+
-- Xcode 15.0+
-
-## Screenshots
-
-<p align="center">
-  <img src="Assets/home.png" width="200" />
-  <img src="Assets/timer.png" width="200" />
-  <img src="Assets/tasks.png" width="200" />
-</p>
+- iOS 18.0+
+- Xcode 13.0+
 
 ## License
 

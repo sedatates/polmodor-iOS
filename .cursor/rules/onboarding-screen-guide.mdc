@@ -31,6 +31,8 @@ globs: Polmodor/Sources/Features/Onboarding/*
 - Page control indicator
 - Skip option available
 - Progress indication
+- Each Page has unique color when scrolling it needs to interpolate another
+- Final button needs to be animated
 
 ### Content Guidelines
 
@@ -69,44 +71,12 @@ struct OnboardingContent {
 - Description: System 17pt Regular
 - Button Text: System 17pt Semibold
 
-### Color Palette
-
-```swift
-struct OnboardingColors {
-    static let primary = Color("Primary")          // #FF6B6B
-    static let secondary = Color("Secondary")      // #4DABF7
-    static let background = Color("Background")    // #FFFFFF
-    static let text = Color("TextPrimary")        // #1A1A1A
-    static let textSecondary = Color("TextSecondary") // #666666
-}
-```
-
 ### Layout Guidelines
 
 - Safe area respecting
 - Dynamic type support
 - Proper spacing hierarchy
 - Responsive layout support
-
-## Animation System
-
-### Transition Animations
-
-```swift
-struct ScreenTransition: ViewModifier {
-    let offset: CGFloat
-
-    func body(content: Content) -> some View {
-        content
-            .offset(x: offset)
-            .animation(.spring(
-                response: 0.3,
-                dampingFraction: 0.8,
-                blendDuration: 0
-            ), value: offset)
-    }
-}
-```
 
 ### Content Animations
 
@@ -115,32 +85,6 @@ struct ScreenTransition: ViewModifier {
 - Spring effect for buttons
 - Smooth state transitions
 
-### Progress Indicator
-
-```swift
-struct PageControl: View {
-    let numberOfPages: Int
-    let currentPage: Int
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<numberOfPages, id: \.self) { page in
-                Circle()
-                    .fill(page == currentPage ?
-                          OnboardingColors.primary :
-                          OnboardingColors.primary.opacity(0.3))
-                    .frame(width: 8, height: 8)
-                    .animation(.easeInOut, value: currentPage)
-            }
-        }
-    }
-}
-```
-
-## State Management
-
-### OnboardingState
-
 ```swift
 class OnboardingViewModel: ObservableObject {
     @Published var currentPage: Int = 0
@@ -148,7 +92,6 @@ class OnboardingViewModel: ObservableObject {
     @Published var isAnimating: Bool = false
 
     let numberOfPages: Int
-
     init(numberOfPages: Int = 4) {
         self.numberOfPages = numberOfPages
     }
@@ -190,35 +133,6 @@ class UserPreferences {
 - Completion handling
 
 ### Gesture Support
-
-```swift
-struct OnboardingView: View {
-    @StateObject private var viewModel: OnboardingViewModel
-
-    var body: some View {
-        content
-            .gesture(
-                DragGesture()
-                    .onEnded { value in
-                        handleSwipe(value)
-                    }
-            )
-    }
-
-    private func handleSwipe(_ value: DragGesture.Value) {
-        let horizontalAmount = value.translation.width
-        let threshold: CGFloat = 50
-
-        if abs(horizontalAmount) > threshold {
-            if horizontalAmount > 0 {
-                viewModel.previousPage()
-            } else {
-                viewModel.nextPage()
-            }
-        }
-    }
-}
-```
 
 ## Accessibility
 
@@ -330,19 +244,8 @@ class OnboardingViewModelTests: XCTestCase {
 
 ## Resources
 
-- [Human Interface Guidelines](mdc:https:/developer.apple.com/design/human-interface-guidelines)
+- @https://developer.apple.com/design/human-interface-guidelines
 - [SwiftUI Documentation](mdc:https:/developer.apple.com/documentation/swiftui)
 - [iOS Accessibility Guide](mdc:https:/developer.apple.com/accessibility/ios)
 
-## Implementation Checklist
 
-- [ ] Screen flow implementation
-- [ ] Design system setup
-- [ ] Animation system
-- [ ] State management
-- [ ] Navigation control
-- [ ] Accessibility support
-- [ ] Data persistence
-- [ ] Unit tests
-- [ ] UI tests
-- [ ] Documentation
