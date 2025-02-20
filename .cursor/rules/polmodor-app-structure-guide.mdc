@@ -8,7 +8,7 @@ globs: **/*
 ## Project Structure
 
 ```plaintext
-polmodor/
+Polmodor/
 ├── Sources/
 │   ├── App/
 │   │   ├── AppDelegate.swift
