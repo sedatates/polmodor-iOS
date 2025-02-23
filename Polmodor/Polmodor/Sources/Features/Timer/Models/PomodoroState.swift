@@ -1,47 +1,84 @@
 import Foundation
 import SwiftUI
 
-enum PomodoroState: String, CaseIterable, Equatable {
-    case work
-    case shortBreak
-    case longBreak
+public enum PomodoroState: String, CaseIterable {
+    case work = "Work"
+    case shortBreak = "Short Break"
+    case longBreak = "Long Break"
 
-    var duration: TimeInterval {
+    public struct Colors {
+        public let start: Color
+        public let middle: Color
+        public let end: Color
+    }
+    
+    public var colors: Colors {
         switch self {
         case .work:
-            return 60  // 25 minutes
+            return Colors(
+                start: .init("#FF6B6B"),
+                middle: .init("#FA5252"),
+                end: .init("#F03E3E")
+            )
         case .shortBreak:
-            return 5 * 60  // 5 minutes
+            return Colors(
+                start: .init("#4DABF7"),
+                middle: .init("#339AF0"),
+                end: .init("#228BE6")
+            )
         case .longBreak:
-            return 15 * 60  // 15 minutes
+            return Colors(
+                start: .init("#51CF66"),
+                middle: .init("#40C057"),
+                end: .init("#2F9E44")
+            )
         }
     }
+    
+    
+    
+    public var description: String {
+        self.rawValue
+    }
 
-    var title: String {
+    public var title: String {
+        self.rawValue
+    }
+    
+    
+    
+
+//    public var colors: Colors {
+//        switch self {
+//        case .work:
+//            return Colors(
+//                start: .init("#FF6B6B"),
+//                middle: .init("#FA5252"),
+//                end: .init("#F03E3E")
+//            )
+//        case .shortBreak:
+//            return Colors(
+//                start: .init("#4DABF7"),
+//                middle: .init("#339AF0"),
+//                end: .init("#228BE6")
+//            )
+//        case .longBreak:
+//            return Colors(
+//                start: .init("#51CF66"),
+//                middle: .init("#40C057"),
+//                end: .init("#2F9E44")
+//            )
+//        }
+//    }
+
+    public var duration: TimeInterval {
         switch self {
         case .work:
-            return "Work"
+            return TimeInterval(UserDefaults.standard.integer(forKey: "workDuration")) * 60
         case .shortBreak:
-            return "Short Break"
+            return TimeInterval(UserDefaults.standard.integer(forKey: "shortBreakDuration")) * 60
         case .longBreak:
-            return "Long Break"
+            return TimeInterval(UserDefaults.standard.integer(forKey: "longBreakDuration")) * 60
         }
     }
-
-    var colors: (start: String, middle: String, end: String) {
-        switch self {
-        case .work:
-            return ("#FF6B6B", "#FA5252", "#F03E3E")
-        case .shortBreak:
-            return ("#4DABF7", "#339AF0", "#228BE6")
-        case .longBreak:
-            return ("#51CF66", "#40C057", "#2F9E44")
-        }
-    }
-}
-
-struct TimerColors {
-    let start: Color
-    let middle: Color
-    let end: Color
 }

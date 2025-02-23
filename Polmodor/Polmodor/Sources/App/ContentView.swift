@@ -1,10 +1,12 @@
 import SwiftUI
 
 struct ContentView: View {
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage(
+        "hasCompletedOnboarding"
+    ) private var hasCompletedOnboarding = false
     
     var body: some View {
-        if hasCompletedOnboarding {
+        if !hasCompletedOnboarding {
             OnboardingView()
         } else {
             TabView {
@@ -35,6 +37,10 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .environmentObject(TimerViewModel())
-        .environmentObject(TaskViewModel())
+        .environmentObject(
+            TimerViewModel()
+        )
+        .environmentObject(
+            TaskViewModel()
+        )
 }

@@ -1,0 +1,47 @@
+---
+description: 
+globs: Polmodor/Polmodor/Sources/Features/Timer/Views
+---
+# Polmodor Timer Enhancement Guide
+
+SwiftUI first, UIKit when needed
+
+## Overview
+This guide details enhancements to the Polmodor timer feature to integrate dynamic settings from `SettingsView`, ensuring the timer UI and logic reflect user-customized durations and preferences while maintaining performance, accessibility, and animation standards from the SwiftUI guidelines.
+
+## Key Changes and Enhancements
+
+### 1. Dynamic Duration Support
+- **Requirement**: The timer must update its durations (work, short break, long break) based on user settings in `SettingsView`.
+- **Implementation Details**:
+  - Modify `PomodoroState` in `Models/PomodoroState.swift` to use `SettingsManager` values for `duration`, replacing hardcoded times (e.g., 25 minutes for work).
+  - Update `TimerViewModel` in `ViewModels/TimerViewModel.swift` to observe `@AppStorage` changes, recalculating `timeRemaining`, `totalDuration`, and `progress` when settings change.
+  - Ensure `TimerService` in `Services/TimerService/` schedules timers and notifications using these dynamic durations.
+
+### 2. UI and Animation Adjustments
+- **Requirement**: The `TimerView` must display updated durations and animate state changes smoothly, reflecting settings changes.
+- **Implementation Details**:
+  - Update `TimerView` in `Views/TimerView.swift` to show the current duration (e.g., “25:00”) based on `workDuration`, using animations from the "SwiftUI Timer Animation Development Guide" (linear progress, spring state transitions).
+  - Modify `TimerQuadrantShape` and gradient layers to interpolate colors based on `PomodoroState` and progress, ensuring visual feedback matches adjusted durations.
+  - Support reduced motion by disabling animations and using instant transitions when `accessibilityReduceMotion` is enabled.
+
+### 3. Automation and Interaction
+- **Requirement**: Implement automation preferences (`autoStartBreaks`, `autoStartPomodoros`) and maintain gesture support for user control.
+- **Implementation Details**:
+  - Enhance `TimerViewModel` to automatically start the next session based on settings, using haptic feedback (light/medium impacts) for starts.
+  - Support gestures (tap to toggle play/pause, double tap to reset, long press to switch states) as per the timer animation guide’s "Interaction Guidelines."
+  - Ensure VoiceOver provides appropriate labels and hints for timer controls and automation status.
+
+## Performance Optimization
+- Minimize unnecessary view updates in `TimerView` by debouncing settings changes with Combine.
+- Prevent memory leaks by cleaning up `@Published` properties and Combine subscriptions in `TimerViewModel`.
+- Use lazy loading and caching for UI components to optimize render performance.
+
+## Testing Guidelines
+- Add unit tests in `TimerViewModelTests` to verify dynamic duration updates, automation logic, and state transitions.
+- Include UI tests to check timer animations, settings propagation, and accessibility features under various conditions (default, reduced motion, large text).
+
+## Accessibility Considerations
+- Add VoiceOver labels and hints for timer controls, reflecting current settings and automation status.
+- Ensure dynamic type support maintains layout integrity for all text sizes.
+- Implement reduced motion support as specified in the timer animation and onboarding guides.

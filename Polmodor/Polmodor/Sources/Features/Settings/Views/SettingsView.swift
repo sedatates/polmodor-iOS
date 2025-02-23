@@ -101,4 +101,4 @@ struct AboutView: View {
     NavigationView {
         SettingsView()
     }
-} 
+}

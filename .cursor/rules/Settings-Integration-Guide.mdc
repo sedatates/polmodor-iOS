@@ -1,0 +1,48 @@
+---
+description: 
+globs: Polmodor/Sources/Features/**/*,
+---
+# Polmodor Settings Integration Guide
+
+SwiftUI first, UIKit when needed
+
+## Overview
+This guide outlines the integration of the new `SettingsView` into the Polmodor SwiftUI application, allowing users to customize timer durations, automation preferences, and notification settings. These settings will dynamically influence the timer behavior, UI, and user experience while adhering to the existing SwiftUI guidelines.
+
+## Key Changes and Enhancements
+
+### 1. Settings Integration with Timer Logic
+- **Requirement**: The `SettingsView` enables users to adjust work duration (15–60 minutes), short break duration (3–15 minutes), long break duration (10–30 minutes), and pomodoros until a long break (2–6). These settings must control `PomodoroState` durations dynamically.
+- **Implementation Details**:
+  - Update `PomodoroState` in `Models/PomodoroState.swift` to reference `SettingsManager` for dynamic duration values instead of hardcoded ones.
+  - Modify `TimerViewModel` in `ViewModels/TimerViewModel.swift` to observe `SettingsManager` changes using `@AppStorage` or Combine publishers, updating `timeRemaining`, `totalDuration`, and `progress` properties.
+  - Ensure `TimerService` in `Services/TimerService/` uses these dynamic durations for scheduling and notifications.
+  - Use the color system from the "SwiftUI Timer Animation Development Guide" to interpolate colors based on the current state and progress, reflecting adjusted durations visually.
+
+### 2. Automation Preferences
+- **Requirement**: Settings include toggles for `autoStartBreaks` and `autoStartPomodoros` to control automatic timer starts.
+- **Implementation Details**:
+  - Enhance `TimerViewModel` to monitor these `@AppStorage` values, automatically starting the next session when a timer completes if enabled.
+  - Update `NotificationManager` to respect `showNotifications` and `playSound` settings, triggering notifications and sounds only when enabled.
+  - Integrate haptic feedback (light/medium impacts) for automated starts, as specified in the timer animation guide’s "Interaction Guidelines."
+  - Ensure VoiceOver announces auto-start status and provides hints for manual control when automation is disabled.
+
+### 3. Data Persistence and State Management
+- **Requirement**: Settings changes must persist across app launches and be accessible across features.
+- **Implementation Details**:
+  - Use `@AppStorage` in `SettingsView` to store settings in `UserDefaults` (e.g., `workDuration`, `shortBreakDuration`, etc.).
+  - Integrate with `SettingsManager` in the implementation guide, ensuring timer, task management, and widgets access these settings.
+  - Update `UserPreferences` in the onboarding guide to include settings for version tracking and re-onboarding logic.
+
+## Design System Consistency
+- Use `PolmodorTheme` colors, typography, and layout guidelines for `SettingsView`, ensuring consistency with timer and onboarding screens.
+- Maintain smooth color transitions and animations in `TimerView` based on the timer animation guide, adjusting for dynamic durations.
+
+## Testing and Quality Assurance
+- Expand unit tests in `TimerViewModelTests` to cover settings-related logic (duration changes, automation toggles, notifications).
+- Add UI tests to simulate settings adjustments, timer behavior, and accessibility interactions, aiming for 100% coverage.
+
+## Best Practices
+- Follow MVVM architecture, proper encapsulation, and clean code principles.
+- Implement error handling for invalid duration inputs in `SettingsView`.
+- Optimize performance by debouncing rapid settings changes in `TimerViewModel` and preventing memory leaks.

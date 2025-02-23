@@ -2,8 +2,9 @@
 description: 
 globs: **/*
 ---
-
 # Polmodor iOS Native Implementation Guide
+
+SwiftUI first, UIKit when needed
 
 ## Project Structure
 
@@ -11,13 +12,13 @@ globs: **/*
 Polmodor/
 ├── Sources/
 │   ├── App/
-│   │   ├── AppDelegate.swift
-│   │   ├── SceneDelegate.swift
-│   │   └── Info.plist
+│   │   ├── ContentView.swift   [ContentView.swift](mdc:Polmodor/Polmodor/Sources/App/ContentView.swift)
+│   │   ├── PolmodorApp.swift   [PolmodorApp.swift](mdc:Polmodor/Polmodor/Sources/App/PolmodorApp.swift)
+│   │   └── Info.plist          [Info.plist](mdc:Polmodor/Polmodor/Info.plist)
 │   ├── Features/
 │   │   ├── Timer/
 │   │   │   ├── Views/
-│   │   │   │   ├── TimerView.swift
+│   │   │   │   ├── TimerView.swift           [TimerView.swift](mdc:Polmodor/Polmodor/Sources/Features/Timer/Views/TimerView.swift)
 │   │   │   │   ├── TimerCircleView.swift
 │   │   │   │   └── TimerControlsView.swift
 │   │   │   ├── ViewModels/
@@ -34,12 +35,13 @@ Polmodor/
 │   │   │       └── Task.swift
 │   │   └── Settings/
 │   │       ├── Views/
-│   │       ├── ViewModels/
+│   │       │   └── SettingsView.swift     [SettingsView.swift](mdc:Polmodor/Polmodor/Sources/Features/Settings/Views/SettingsView.swift)
 │   │       └── Models/
+│   │           └── SettingsManager.swift
 │   ├── Core/
 │   │   ├── Extensions/
-│   │   │   ├── Color+Extensions.swift
-│   │   │   └── Date+Extensions.swift
+│   │   │   ├── Color+Extensions.swift     [Color+Extensions.swift](mdc:Polmodor/Polmodor/Sources/Core/Extensions/Color+Extensions.swift)
+│   │   │   └── Date+Extensions.swift      [Date+Extensions.swift](mdc:Polmodor/Polmodor/Sources/Core/Extensions/Date+Extensions.swift)
 │   │   ├── Protocols/
 │   │   │   ├── TimerServiceProtocol.swift
 │   │   │   └── TaskServiceProtocol.swift
@@ -66,455 +68,310 @@ Polmodor/
     └── Models/
 ```
 
-## Core Features Implementation
-
-### 1. Timer Feature
-
-```swift
-// Models/PomodoroState.swift
-enum PomodoroState {
-    case work
-    case shortBreak
-    case longBreak
-
-    var duration: TimeInterval {
-        switch self {
-        case .work: return 25 * 60
-        case .shortBreak: return 5 * 60
-        case .longBreak: return 15 * 60
-        }
-    }
-}
-
-// ViewModels/TimerViewModel.swift
-class TimerViewModel: ObservableObject {
-    @Published private(set) var state: PomodoroState = .work
-    @Published private(set) var isRunning = false
-    @Published private(set) var progress: Double = 0
-
-    private var timerService: TimerServiceProtocol
-    private var cancellables = Set<AnyCancellable>()
-
-    init(timerService: TimerServiceProtocol = TimerService()) {
-        self.timerService = timerService
-        setupBindings()
-    }
-
-    private func setupBindings() {
-        timerService.progressPublisher
-            .assign(to: &$progress)
-
-        timerService.statePublisher
-            .assign(to: &$state)
-    }
-
-    func startTimer() {
-        timerService.start()
-    }
-
-    func pauseTimer() {
-        timerService.pause()
-    }
-}
-
-// Views/TimerView.swift
-struct TimerView: View {
-    @StateObject private var viewModel = TimerViewModel()
-
-    var body: some View {
-        VStack(spacing: 20) {
-            TimerCircleView(
-                progress: viewModel.progress,
-                state: viewModel.state
-            )
-
-            TimerControlsView(
-                isRunning: viewModel.isRunning,
-                onStart: viewModel.startTimer,
-                onPause: viewModel.pauseTimer
-            )
-        }
-        .padding()
-    }
-}
-```
-
-### 2. Task Management
-
-```swift
-// Models/Task.swift
-struct Task: Identifiable, Codable {
-    let id: UUID
-    var title: String
-    var pomodoroCount: Int
-    var completedPomodoros: Int
-    var status: TaskStatus
-
-    enum TaskStatus: String, Codable {
-        case todo
-        case inProgress
-        case completed
-    }
-}
-
-// ViewModels/TaskViewModel.swift
-class TaskViewModel: ObservableObject {
-    @Published private(set) var tasks: [Task] = []
-    private let taskService: TaskServiceProtocol
-
-    init(taskService: TaskServiceProtocol = TaskService()) {
-        self.taskService = taskService
-        loadTasks()
-    }
-
-    private func loadTasks() {
-        taskService.fetchTasks()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] tasks in
-                self?.tasks = tasks
-            }
-            .store(in: &cancellables)
-    }
-
-    func addTask(_ task: Task) {
-        taskService.addTask(task)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                self?.loadTasks()
-            }
-            .store(in: &cancellables)
-    }
-}
-
-// Views/TaskListView.swift
-struct TaskListView: View {
-    @StateObject private var viewModel = TaskViewModel()
-    @State private var showingAddTask = false
-
-    var body: some View {
-        List {
-            ForEach(viewModel.tasks) { task in
-                TaskRowView(task: task)
-            }
-            .onDelete(perform: deleteTask)
-        }
-        .navigationTitle("Tasks")
-        .toolbar {
-            Button("Add Task") {
-                showingAddTask = true
-            }
-        }
-        .sheet(isPresented: $showingAddTask) {
-            AddTaskView(viewModel: viewModel)
-        }
-    }
-}
-```
-
-### 3. Widget Implementation
-
-```swift
-// PolmodorWidget.swift
-struct PolmodorWidget: Widget {
-    private let kind: String = "PolmodorWidget"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: PolmodorTimelineProvider()) { entry in
-            PolmodorWidgetEntryView(entry: entry)
-        }
-        .configurationDisplayName("Polmodor Timer")
-        .description("Track your Pomodoro timer progress.")
-        .supportedFamilies([.systemSmall, .systemMedium])
-    }
-}
-
-// Live Activity
-struct PolmodorLiveActivity: Widget {
-    var body: some WidgetConfiguration {
-        ActivityConfiguration(for: PolmodorAttributes.self) { context in
-            LiveActivityView(context: context)
-        } dynamicIsland: { context in
-            DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) {
-                    TimerStatusView(context: context)
-                }
-                DynamicIslandExpandedRegion(.trailing) {
-                    TimerControlsView(context: context)
-                }
-            } compactLeading: {
-                TimerLabel(context: context)
-            } compactTrailing: {
-                ProgressView(context: context)
-            } minimal: {
-                ProgressView(context: context)
-            }
-        }
-    }
-}
-```
-
-### 4. Theme System
-
-```swift
-// Theme/PolmodorTheme.swift
-struct PolmodorTheme {
-    static let shared = PolmodorTheme()
-
-    let colors = Colors()
-    let typography = Typography()
-    let layout = Layout()
-
-    struct Colors {
-        let timerColors = TimerColors()
-        let background = Color("BackgroundColor")
-        let text = Color("TextColor")
-
-        struct TimerColors {
-            let work = Color("WorkColor")
-            let shortBreak = Color("ShortBreakColor")
-            let longBreak = Color("LongBreakColor")
-        }
-    }
-
-    struct Typography {
-        let title = Font.system(.title, weight: .bold)
-        let body = Font.system(.body)
-        let timer = Font.custom("SFMono-Bold", size: 44)
-    }
-
-    struct Layout {
-        let padding = EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
-        let spacing: CGFloat = 20
-    }
-}
-
-// Components/StyledButton.swift
-struct StyledButton: View {
-    let title: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(PolmodorTheme.shared.typography.body)
-                .padding()
-                .background(PolmodorTheme.shared.colors.timerColors.work)
-                .foregroundColor(.white)
-                .cornerRadius(10)
-        }
-    }
-}
-```
-
-## Core Data Integration
-
-```swift
-// Models/TaskModel.xcdatamodeld
-// Task Entity
-class TaskEntity: NSManagedObject {
-    @NSManaged public var id: UUID
-    @NSManaged public var title: String
-    @NSManaged public var pomodoroCount: Int32
-    @NSManaged public var completedPomodoros: Int32
-    @NSManaged public var status: String
-    @NSManaged public var createdAt: Date
-}
-
-// Services/TaskService.swift
-class TaskService: TaskServiceProtocol {
-    private let container: NSPersistentContainer
-
-    init() {
-        container = NSPersistentContainer(name: "TaskModel")
-        container.loadPersistentStores { description, error in
-            if let error = error {
-                fatalError("Failed to load Core Data stack: \(error)")
-            }
-        }
-    }
-
-    func fetchTasks() -> AnyPublisher<[Task], Error> {
-        let request: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-
-        return Future { promise in
-            do {
-                let entities = try self.container.viewContext.fetch(request)
-                let tasks = entities.map { self.mapEntityToTask($0) }
-                promise(.success(tasks))
-            } catch {
-                promise(.failure(error))
-            }
-        }.eraseToAnyPublisher()
-    }
-}
-```
-
-## Essential Features
-
-1. Background Modes
-
-```swift
-// Info.plist
-<key>UIBackgroundModes</key>
-<array>
-    <string>audio</string>
-    <string>processing</string>
-</array>
-```
-
-2. Notifications
-
-```swift
-class NotificationManager {
-    static let shared = NotificationManager()
-
-    func scheduleTimerCompletion(for state: PomodoroState) {
-        let content = UNMutableNotificationContent()
-        content.title = "Timer Completed"
-        content.body = "Time for a \(state == .work ? "break" : "focus session")!"
-        content.sound = .default
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: state.duration, repeats: false)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request)
-    }
-}
-```
-
-3. Settings Storage
-
-```swift
-class SettingsManager {
-    static let shared = SettingsManager()
-
-    private let defaults = UserDefaults.standard
-
-    var workDuration: TimeInterval {
-        get { defaults.double(forKey: "workDuration") }
-        set { defaults.set(newValue, forKey: "workDuration") }
-    }
-
-    var shortBreakDuration: TimeInterval {
-        get { defaults.double(forKey: "shortBreakDuration") }
-        set { defaults.set(newValue, forKey: "shortBreakDuration") }
-    }
-}
-```
-
-## Testing Strategy
-
-```swift
-// Tests/TimerViewModelTests.swift
-class TimerViewModelTests: XCTestCase {
-    var sut: TimerViewModel!
-    var mockTimerService: MockTimerService!
-
-    override func setUp() {
-        super.setUp()
-        mockTimerService = MockTimerService()
-        sut = TimerViewModel(timerService: mockTimerService)
-    }
-
-    func testTimerStart() {
-        // Given
-        XCTAssertFalse(sut.isRunning)
-
-        // When
-        sut.startTimer()
-
-        // Then
-        XCTAssertTrue(sut.isRunning)
-        XCTAssertTrue(mockTimerService.startCalled)
-    }
-}
-
-// Tests/TaskServiceTests.swift
-class TaskServiceTests: XCTestCase {
-    var sut: TaskService!
-    var mockContainer: NSPersistentContainer!
-
-    override func setUp() {
-        super.setUp()
-        mockContainer = NSPersistentContainer(name: "TestTaskModel")
-        sut = TaskService(container: mockContainer)
-    }
-
-    func testAddTask() {
-        // Test implementation
-    }
-}
-```
-
-## Performance Optimization
-
-1. Timer Accuracy
-
-```swift
-class PreciseTimer {
-    private var displayLink: CADisplayLink?
-    private var lastUpdate: CFTimeInterval = 0
-
-    func start() {
-        displayLink = CADisplayLink(target: self, selector: #selector(update))
-        displayLink?.add(to: .current, forMode: .common)
-    }
-
-    @objc private func update(displayLink: CADisplayLink) {
-        let elapsed = displayLink.timestamp - lastUpdate
-        // Update timer logic
-    }
-}
-```
-
-2. Memory Management
-
-```swift
-extension TaskListView {
-    func cleanupCache() {
-        URLCache.shared.removeAllCachedResponses()
-        // Additional cleanup
-    }
-}
-```
-
-## App Store Guidelines
-
-1. Privacy
-
-```swift
-// Info.plist
-<key>NSUserNotificationsUsageDescription</key>
-<string>We need to send you notifications when your Pomodoro timer completes.</string>
-```
-
-2. Required Capabilities
-
-```swift
-// Info.plist
-<key>UIRequiredDeviceCapabilities</key>
-<array>
-    <string>armv7</string>
-</array>
-```
-
-## Best Practices
-
-1. Error Handling
-
-```swift
-enum PolmodorError: Error {
-    case timerError(String)
-    case taskError(String)
-    case persistenceError(String)
-
-    var localizedDescription: String {
-        switch self {
-        case .timerError(let message): return "Timer error: \(message)"
-        case .taskError(let message): return "Task error: \(message)"
-        case .persistenceError(let message): return "Database error: \(message)"
-        }
-    }
-}
-```
+The Polmodor iOS app is a Pomodoro timer application designed to help users manage their focus sessions and tasks effectively. Below is a detailed explanation of its key features, structure, and implementation, focusing on the timer feature, task management, widget implementation, theme system, and other essential components. This explanation avoids code and instead provides a textual overview for clarity.
+
+---
+
+### **Project Structure**
+
+The Polmodor app is organized into a modular and maintainable directory structure to ensure ease of navigation and updates. The main directories include:
+
+- **Sources/App/**: Contains the app's entry point and configuration files, such as the app delegate and initialization logic.
+- **Sources/Features/**: Houses feature-specific modules, such as:
+  - **Timer**: Manages the Pomodoro timer functionality.
+  - **Tasks**: Handles task management and tracking.
+  - **Settings**: Allows users to customize app preferences.
+    Each module includes its own Views (UI), ViewModels (business logic), and Models (data structures).
+- **Sources/Core/**: Includes shared utilities across the app, such as:
+  - Extensions for common Swift types.
+  - Protocols for defining service interfaces.
+  - Utility functions for general-purpose tasks.
+- **Sources/UI/**: Contains reusable UI components (e.g., buttons, labels) and theme-related files for consistent styling.
+- **Sources/Services/**: Manages background and data services, such as:
+  - **TimerService**: Handles the actual timing logic for the Pomodoro sessions.
+  - **TaskService**: Manages task persistence and retrieval.
+- **Widget/**: Dedicated to widget and live activity implementations for quick access to timer states.
+
+This structure ensures that each part of the app is self-contained, making it easier to maintain and scale.
+
+---
+
+### **Core Features Implementation**
+
+#### **1. Timer Feature**
+
+The timer feature is the central component of the Polmodor app, implementing the Pomodoro technique with work sessions, short breaks, and long breaks.
+
+- **Models**:
+  - The timer operates in three states: work (25 minutes), short break (5 minutes), and long break (15 minutes).
+  - These durations are predefined but can be customized via the app's settings.
+- **ViewModels**:
+  - The timer's state (e.g., work, short break, long break), progress (e.g., time elapsed), and running status (e.g., active or paused) are managed by a ViewModel.
+  - The ViewModel interacts with a timer service to handle the actual timing logic, ensuring flexibility and testability.
+- **Views**:
+  - The timer is displayed as a circular UI element, showing the remaining time in a large, bold font (e.g., "25:00" for a work session).
+  - A progress ring around the circle indicates the session's progress, with markers for intervals or actions (e.g., "START").
+  - Controls below the timer include buttons to start, pause, or reset the timer, styled with icons (e.g., play/pause triangle, reset arrow).
+
+The timer uses a service protocol, allowing the timing logic to be mocked or replaced for testing purposes, ensuring accuracy and reliability.
+
+#### **2. Task Management**
+
+Task management allows users to track tasks alongside their Pomodoro sessions, enhancing productivity.
+
+- **Models**:
+  - Tasks are defined with properties like:
+    - Title (e.g., "Write report").
+    - Pomodoro count (e.g., number of sessions to complete the task).
+    - Status (e.g., to-do, in-progress, completed).
+- **ViewModels**:
+  - The ViewModel manages the list of tasks, fetching them from a task service and updating the UI when tasks are added, modified, or deleted.
+- **Views**:
+  - A list view displays all tasks, showing their titles, Pomodoro counts, and statuses.
+  - A detail view allows users to manage individual tasks, such as editing or marking them as completed.
+  - An "Add Task" button (e.g., a "+" icon) enables users to create new tasks, aligning with the task management UI.
+
+Tasks are persisted using Core Data, ensuring that user data is saved across app sessions and remains available after restarts.
+
+#### **3. Widget Implementation**
+
+Widgets provide quick access to the timer state from the iPhone's home screen or lock screen, improving user engagement.
+
+- **PolmodorWidget**:
+  - A static widget displays the current timer state (e.g., work, short break) and progress (e.g., time remaining).
+  - It supports small and medium sizes for flexibility on the home screen.
+- **PolmodorLiveActivity**:
+  - A dynamic widget updates in real-time, showing the timer's status and progress.
+  - It integrates with the Dynamic Island (on supported devices) for quick interactions, such as starting or pausing the timer.
+  - Compact views show essential information (e.g., remaining time, progress), while expanded views include more details and controls.
+
+These widgets enhance usability by providing at-a-glance information and seamless interactions without opening the app.
+
+#### **4. Theme System**
+
+The theme system ensures a consistent and visually appealing look and feel across the app, making it easy to update the design globally.
+
+- **PolmodorTheme**:
+  - Defines colors, typography, and layout constants used throughout the app.
+  - Colors include:
+    - Timer colors (e.g., red for work, green for short break, blue for long break).
+    - Background colors (e.g., light pink for certain sections).
+    - Text colors (e.g., white for timer display, black for task titles).
+  - Typography includes:
+    - Title fonts (e.g., bold for headings).
+    - Body fonts (e.g., standard for descriptions).
+    - Custom fonts (e.g., for timer display).
+  - Layout constants include:
+    - Padding (e.g., 16-point margins).
+    - Spacing (e.g., 20-point gaps between elements).
+- **Components**:
+  - Reusable UI elements, such as buttons, are styled according to the theme (e.g., red background with white text for timer controls).
+
+This centralized theme management simplifies updates to the app's appearance, ensuring consistency and reducing redundancy.
+
+---
+
+### **Core Data Integration**
+
+Core Data is used for persisting task data, ensuring that tasks are reliably stored and retrieved.
+
+- **TaskEntity**:
+  - Represents the task model in Core Data, with attributes matching the task structure (e.g., ID, title, Pomodoro count, status, creation date).
+- **TaskService**:
+  - Handles fetching and adding tasks, abstracting Core Data operations.
+  - Ensures tasks are sorted by creation date for display in the UI.
+  - Provides error handling for persistence issues, such as database failures.
+
+This integration supports the app's task management feature, allowing users to track tasks across sessions.
+
+---
+
+### **Essential Features**
+
+#### **Background Modes**
+
+- The app is configured to run in the background for specific tasks, such as continuing timer operations or processing data.
+- Background modes are defined in the app's configuration file (e.g., Info.plist), specifying capabilities like audio or processing.
+
+#### **Notifications**
+
+- A NotificationManager class schedules notifications for timer completions, enhancing user experience by reminding them of session changes.
+- Notifications include:
+  - Title (e.g., "Timer Completed").
+  - Body (e.g., "Time for a break!" or "Time for a focus session!").
+  - Sound (e.g., default notification sound).
+- Notifications are triggered based on the timer's state and duration, ensuring timely alerts.
+
+#### **Settings Storage**
+
+- A SettingsManager uses UserDefaults to store and retrieve user preferences, such as:
+  - Custom durations for work sessions, short breaks, and long breaks.
+  - Other app settings, such as notification preferences or theme options.
+- This ensures that user customizations are saved and applied across app sessions.
+
+---
+
+### **Testing Strategy**
+
+Unit tests are implemented for critical components to maintain reliability and catch regressions early.
+
+- **TimerViewModelTests**:
+  - Verify the timer's start, pause, and reset functionalities.
+  - Ensure the timer transitions correctly between states (e.g., work to short break).
+- **TaskServiceTests**:
+  - Ensure tasks are correctly added, fetched, and deleted from Core Data.
+  - Test edge cases, such as handling empty task lists or persistence errors.
+
+These tests help ensure the app's core features work as expected, reducing bugs in production.
+
+---
+
+### **Performance Optimization**
+
+#### **Timer Accuracy**
+
+- A PreciseTimer class uses a high-precision timing mechanism (e.g., CADisplayLink) to update the timer smoothly and accurately.
+- This ensures that the timer remains precise, even during long sessions, and provides a seamless user experience.
+
+#### **Memory Management**
+
+- Views like the task list include methods to clean up caches, such as removing cached responses or clearing temporary data.
+- These optimizations prevent memory issues, especially during prolonged app usage, improving overall performance.
+
+---
+
+### **App Store Guidelines**
+
+#### **Privacy**
+
+- The app's configuration file (e.g., Info.plist) includes necessary descriptions for user-facing features, such as:
+  - Notification permissions (e.g., "We need to send you notifications when your Pomodoro timer completes.").
+- This ensures compliance with App Store privacy requirements and transparency with users.
+
+#### **Required Capabilities**
+
+- The app specifies required device capabilities (e.g., ARMv7 architecture) in its configuration file.
+- This ensures the app runs only on supported hardware, avoiding compatibility issues.
+
+---
+
+### **Best Practices**
+
+#### **Error Handling**
+
+- A custom error enum (e.g., PolmodorError) provides clear, localized error messages for different failure scenarios, such as:
+  - Timer errors (e.g., "Failed to start timer").
+  - Task errors (e.g., "Failed to add task").
+  - Persistence errors (e.g., "Database error occurred").
+- These error messages aid in debugging and provide meaningful feedback to users, improving the overall experience.
+
+**Ana Noktalar:**
+
+- Pomodoro uygulamanız SwiftUI ile geliştirilmiş ve yeni bir `SettingsView` eklenmiş.
+- `SettingsView` ile Pomodoro timer süresi (çalışma, kısa mola, uzun mola) ve otomatik başlatma gibi ayarlar kontrol edilecek.
+- Bu rehber, ayarların timer, UI ve diğer özelliklere entegrasyonunu detaylı açıklar, kod yazmadan.
+
+**Ayarların Timer'a Entegrasyonu:**  
+Ayarlar, timer sürelerini dinamik hale getirir. Örneğin, çalışma süresi 15-60 dakika arasında ayarlanabilir. Timer, yeni oturumlar başladığında bu ayarları kullanır, ancak mevcut oturumlar etkilenmez.
+
+**Otomatik Başlatma ve Bildirimler:**  
+Kullanıcı, molaları ve yeni Pomodoro'ları otomatik başlatmayı seçebilir. Bildirimler ve sesler, ayarlara bağlı olarak kontrol edilir.
+
+**UI ve Erişilebilirlik:**  
+Timer UI, ayarlara göre güncellenir ve renk geçişleri, animasyonlar gibi görsel geri bildirimler korunur. Erişilebilirlik için VoiceOver desteği ve hareket azaltma (reduced motion) özellikleri eklenecek.
+
+**Şaşırtıcı Detay:**  
+Eğer çalışma süresi değişirse, geçmiş Pomodoro'ların süresi korunur, ancak yeni oturumlar yeni süreyi kullanır, bu da zaman takibinde hassasiyet sağlar.
+
+---
+
+#### Giriş
+
+Bu rehber, SwiftUI ile geliştirilen Polmodor Pomodoro uygulamasının `SettingsView` entegrasyonunu detaylı bir şekilde açıklamaktadır. Kullanıcı, timer sürelerini (çalışma, kısa mola, uzun mola), otomatik başlatma tercihlerini ve bildirim ayarlarını özelleştirebilir. Bu ayarlar, timer mantığı, kullanıcı arayüzü (UI), veri kalıcılığı ve erişilebilirlik gibi çeşitli yönlerde entegre edilmelidir. Rehber, kod yazmadan, geliştiricilerin bu değişiklikleri nasıl uygulayacağını anlamasını sağlamak için tasarlanmıştır.
+
+#### Ayarların Timer Mantığına Entegrasyonu
+
+`SettingsView`, kullanıcıların çalışma süresini (15-60 dakika), kısa mola süresini (3-15 dakika), uzun mola süresini (10-30 dakika) ve uzun molaya kadar geçen Pomodoro sayısını (2-6) ayarlamasına olanak tanır. Bu ayarlar, timer davranışını dinamik hale getirmek için entegre edilmelidir:
+
+- `PomodoroState` enum'unda (örneğin, `Models/PomodoroState.swift`), sabit süreler yerine `SettingsManager` üzerinden dinamik süreler kullanılmalıdır.
+- `TimerViewModel` (örneğin, `ViewModels/TimerViewModel.swift`), `@AppStorage` veya Combine yayıncıları ile ayar değişikliklerini gözlemlemeli ve `timeRemaining`, `totalDuration`, `progress` gibi özellikleri güncellemeli.
+- Mevcut bir oturum sırasında ayarlar değişirse, o oturumun süresi korunmalı, ancak yeni oturumlar başladığında güncellenmiş süreler kullanılmalıdır.
+- `TimerService` (örneğin, `Services/TimerService/`), bu dinamik süreleri zamanlama ve bildirimler için kullanmalıdır.
+- Timer UI'sinde, `TimerQuadrantShape` gibi bileşenler, ayarlara göre renk geçişlerini (örneğin, çalışma: `#FF6B6B` ila `#F03E3E`) korumalıdır.
+
+#### Otomatik Başlatma ve Bildirim Tercihleri
+
+Kullanıcı, `autoStartBreaks` ve `autoStartPomodoros` ayarlarıyla molaları ve yeni Pomodoro'ları otomatik başlatmayı seçebilir. Ayrıca, `showNotifications` ve `playSound` ayarları bildirim ve ses kontrolü sağlar:
+
+- `TimerViewModel`, bir oturum bittiğinde bu ayarları kontrol etmeli ve otomatik başlatma gerekiyorsa bir sonraki oturumu başlatmalıdır.
+- Otomatik başlatma sırasında, hafif veya orta seviyede haptik geri bildirim (`UIImpactFeedbackGenerator`) sağlanmalıdır.
+- `NotificationManager`, bildirim ve sesleri yalnızca `showNotifications` ve `playSound` true olduğunda tetiklemelidir.
+- Erişilebilirlik için, VoiceOver otomatik başlatma durumunu duyurmalı ve manuel kontrol için ipuçları sunmalıdır (örneğin, "Timer duraklatıldı, manuel başlatmak için çift dokunun").
+
+#### UI ve Animasyon Ayarlamaları
+
+Timer UI, ayar değişikliklerine uyum sağlamalı ve mevcut animasyon rehberine uygun olmalıdır:
+
+- `TimerView`, mevcut süreleri (örneğin, "25:00") ayarlara göre güncellemeli ve `TimerQuadrantShape` ile progress animasyonlarını korumalıdır.
+- Animasyonlar, lineer progress (`withAnimation(.linear(duration:))`) ve state geçişlerinde yay efekti (`withAnimation(.spring())`) gibi rehberdeki spesifikasyonlara uygun olmalıdır.
+- Renk geçişleri, mevcut state'e (çalışma, kısa mola, uzun mola) ve progress'e göre interpolasyon yapmalıdır.
+- Erişilebilirlik için, hareket azaltma (`accessibilityReduceMotion`) etkin olduğunda animasyonlar devre dışı bırakılmalı ve anlık geçişler kullanılmalıdır.
+- Dinamik tip desteği ile metin ölçeklendirmesi sağlanmalı, layout bütünlüğü korunmalıdır.
+
+#### Veri Kalıcılığı ve Durum Yönetimi
+
+Ayarlar, uygulama yeniden başlatıldığında kalıcı olmalı ve tüm özellikler tarafından erişilebilir olmalıdır:
+
+- `@AppStorage`, `UserDefaults` üzerinden ayarları saklamak için kullanılmalı (örneğin, `workDuration`, `autoStartBreaks` gibi).
+- `SettingsManager` sınıfı, ayarlara erişimi merkezi hale getirmeli ve tüm özellikler (timer, görev yönetimi, widget'lar) bu ayarları kullanabilmelidir.
+- `TaskStore`, Pomodoro loglarını saklamalı ve her tamamlanan Pomodoro için o anki çalışma süresini kaydetmelidir. Bu, zaman harcanan süre hesaplamasında hassasiyet sağlar (örneğin, geçmiş Pomodoro'lar eski sürelerle, yeni olanlar güncellenmiş sürelerle hesaplanır).
+- `UserPreferences`, uygulama sürümü ve ayarlar sürümünü izlemeli, gelecekteki göçler için hazırlanmalıdır.
+
+#### Navigasyon ve Kullanıcı Akışı
+
+`SettingsView`, ana navigasyonda erişilebilir olmalı ve kullanıcı deneyimiyle entegre edilmelidir:
+
+- `ContentView` veya `TabView` içinde bir ayarlar navigasyon bağlantısı eklenmeli, geçiş animasyonları rehberdeki gibi yatay kaydırma olmalıdır.
+- Onboarding akışında ("Final Setup Screen"), ayar özelleştirmesi için bir seçenek sunulabilir, kullanıcıların başlangıçta süreleri ve tercihleri ayarlamasına olanak tanır.
+- Widget (`PolmodorWidget`) ve canlı etkinlik (`PolmodorLiveActivity`), mevcut ayarları yansıtmalı, doğru timer sürelerini ve otomasyon durumunu göstermelidir.
+
+#### Erişilebilirlik Geliştirmeleri
+
+Ayarlar ve timer UI, tüm kullanıcılar için erişilebilir olmalıdır:
+
+- `SettingsView` kontrolleri için erişilebilirlik etiketleri ve ipuçları eklenmeli (örneğin, "Çalışma süresi, şu an 25 dakika, ayarlamak için çift dokunun").
+- Timer kontrolleri, mevcut durumu duyurmalı ve manuel kontrol için ipuçları sunmalıdır.
+- Dinamik tip desteği, metin ölçeklendirmesini sağlamalı, layout bütünlüğünü korumalıdır.
+- Hareket azaltma etkin olduğunda, animasyonlar devre dışı bırakılmalı ve anlık geçişler kullanılmalıdır.
+
+#### Performans ve Bellek Optimizasyonu
+
+Ayar değişiklikleri, uygulama performansını etkilememelidir:
+
+- `TimerViewModel`, hızlı ayar değişikliklerini yönetmek için Combine ile debounce mekanizması kullanabilir.
+- `@Published` özellikleri ve Combine abonelikleri, bellek sızıntılarını önlemek için düzgün bir şekilde temizlenmelidir.
+- UI bileşenleri (örneğin, `TimerQuadrantShape`, gradyanlar) için lazy loading ve önbellekleme, yeniden çizimleri en aza indirmek için kullanılabilir.
+
+#### Test ve Kalite Güvencesi
+
+Ayar entegrasyonunun doğru çalıştığından emin olmak için testler yapılmalıdır:
+
+- `TimerViewModelTests` ve `TaskServiceTests` içinde, ayar değişikliklerinin timer davranışına, görev takibine ve bildirimlere etkisini doğrulayan birim testleri eklenmelidir.
+- UI testleri, ayar değişikliklerini simüle etmeli, timer davranışını ve erişilebilirlik özelliklerini doğrulamalıdır.
+- Kenar durumlar (örneğin, minimum/maksimum süre sınırları, hareket azaltma etkin) test edilmelidir.
+
+#### Tasarım Sistemi Tutarlılığı
+
+- Tüm yeni ve mevcut görünümler, `PolmodorTheme` renkleri, tipografi ve layout rehberine uygun olmalıdır.
+- `SettingsView` ve `TimerView`, aynı tasarım sistemini kullanarak tutarlılık sağlamalıdır.
+- Animasyonlar ve renk geçişleri, mevcut rehberlere uygun olmalıdır.
+
+#### Ek Hususlar
+
+- Hatalı süre girişleri için hata yönetimi sağlanmalı (örneğin, kısa mola süresinin çalışma süresinden uzun olması).
+- Bildirim ayarları, gizlilik gereksinimlerine uygun olmalı ve `Info.plist` güncellenmelidir.
+- Uygulama sürümü ve ayarlar sürümü izlenmeli, gelecekteki göçler için hazırlanmalıdır.
+
+#### Sonuç
+
+Bu rehber, Polmodor uygulamasının `SettingsView` entegrasyonunu kapsayan tüm yönleri detaylı bir şekilde açıklamaktadır. Geliştiriciler, bu adımları takip ederek uygulamayı kullanıcı dostu, erişilebilir ve performanslı hale getirebilir.
