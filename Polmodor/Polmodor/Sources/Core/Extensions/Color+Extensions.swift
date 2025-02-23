@@ -29,7 +29,6 @@ extension Color {
         default:
             (a, r, g, b) = (1, 1, 1, 0)
         }
-
         self.init(
             .sRGB,
             red: Double(r) / 255,
@@ -95,5 +94,24 @@ extension Color {
         #else
             return nil
         #endif
+    }
+}
+
+// Timer Feature Color Extensions
+extension Color {
+    static let timerColors = TimerColors()
+
+    struct TimerColors {
+        // Work Colors
+        let workStart = Color(hex: "FF6B6B")
+        let workEnd = Color(hex: "F03E3E")
+
+        // Short Break Colors
+        let shortBreakStart = Color(hex: "4ECDC4")
+        let shortBreakEnd = Color(hex: "26A69A")
+
+        // Long Break Colors
+        let longBreakStart = Color(hex: "45B7D1")
+        let longBreakEnd = Color(hex: "2196F3")
     }
 }

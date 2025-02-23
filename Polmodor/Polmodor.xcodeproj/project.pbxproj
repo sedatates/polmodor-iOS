@@ -193,7 +193,7 @@
 				CODE_SIGN_ENTITLEMENTS = Polmodor/Polmodor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Polmodor/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "Polmodor/Assets.xcassets Polmodor/Preview\\ Content";
 				DEVELOPMENT_TEAM = K9878XM64L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -225,7 +225,7 @@
 				CODE_SIGN_ENTITLEMENTS = Polmodor/Polmodor.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_ASSET_PATHS = "\"Polmodor/Preview Content\"";
+				DEVELOPMENT_ASSET_PATHS = "Polmodor/Assets.xcassets Polmodor/Preview\\ Content";
 				DEVELOPMENT_TEAM = K9878XM64L;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

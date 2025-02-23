@@ -1,36 +1,44 @@
 import SwiftUI
 
-@available(iOS 14.0, macOS 11.0, *)
 struct TimerView: View {
     @StateObject private var viewModel = TimerViewModel()
-	  @StateObject private var taskViewModel = TaskViewModel()
     @Environment(\.scenePhase) private var scenePhase
-    @State private var showingTaskForm = false
 
     var body: some View {
-        TimerCircleView(
-            progress: viewModel.progress,
-            timeRemaining: viewModel.timeRemainingFormatted,
-            state: viewModel.state,
-            isRunning: viewModel.isRunning,
-            onStart: viewModel.startTimer,
-            onPause: viewModel.pauseTimer,
-            onReset: viewModel.resetTimer,
-            onAddTask: { showingTaskForm = true }
-        )
-				.sheet(isPresented: $showingTaskForm) {
-					TaskFormView(onSave: taskViewModel.addTask)
-				}
-        .onChange(of: scenePhase) { _ in
-            if scenePhase == .active {
+        GeometryReader { geometry in
+            ZStack {
+               
+
+                // Timer Circle
+                TimerCircleView(
+                    progress: viewModel.progress,
+                    timeRemaining: viewModel.timeRemainingFormatted,
+                    state: viewModel.state,
+                    isRunning: viewModel.isRunning,
+                    onStart: viewModel.startTimer,
+                    onPause: viewModel.pauseTimer,
+                    onReset: viewModel.resetTimer,
+                    onAddTask: {}
+                )
+            }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
                 viewModel.handleForegroundTransition()
-            } else if scenePhase == .background {
+            } else if newPhase == .background {
                 viewModel.handleBackgroundTransition()
             }
         }
-        .ignoresSafeArea()
     }
 }
+
+#if DEBUG
+    struct TimerView_Previews: PreviewProvider {
+        static var previews: some View {
+            TimerView()
+        }
+    }
+#endif
 
 @available(iOS 14.0, macOS 11.0, *)
 struct TimerControlsView: View {
@@ -63,4 +71,3 @@ struct TimerControlsView: View {
         }
     }
 }
-

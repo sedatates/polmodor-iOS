@@ -1,122 +1,172 @@
 import Combine
+import Foundation
 import SwiftUI
+import UserNotifications
 
 #if os(iOS)
     import UIKit
-    import UserNotifications
 #endif
 
 @MainActor
 class TimerViewModel: ObservableObject {
-    @Published private(set) var state: PomodoroState = .work
-    @Published private(set) var progress: Double = 0
-    @Published private(set) var timeRemaining: TimeInterval
-    @Published private(set) var isRunning = false
+    @Published var progress: Double = 0
+    @Published var timeRemaining: TimeInterval = 0
+    @Published var state: PomodoroState = .work
+    @Published var isRunning: Bool = false
 
-    private var timer: AnyCancellable?
+    private var timer: Timer?
     private var startTime: Date?
-    private var backgroundTime: Date?
+    private var cancellables = Set<AnyCancellable>()
+    private var completedPomodoros: Int = 0
 
-    init() {
-        self.timeRemaining = PomodoroState.work.duration
-    }
+    @AppStorage("workDuration") private var workDuration: TimeInterval = 25 * 60
+    @AppStorage("shortBreakDuration") private var shortBreakDuration: TimeInterval = 5 * 60
+    @AppStorage("longBreakDuration") private var longBreakDuration: TimeInterval = 15 * 60
+    @AppStorage("pomodorosUntilLongBreak") private var pomodorosUntilLongBreak: Int = 4
+    @AppStorage("autoStartBreaks") private var autoStartBreaks: Bool = false
+    @AppStorage("autoStartPomodoros") private var autoStartPomodoros: Bool = false
 
-    func handleBackgroundTransition() {
-        backgroundTime = Date()
-    }
-
-    func handleForegroundTransition() {
-        guard let backgroundTime = backgroundTime else { return }
-        let timeInBackground = Date().timeIntervalSince(backgroundTime)
-        if isRunning {
-            timeRemaining = max(0, timeRemaining - timeInBackground)
-            if timeRemaining == 0 {
-                completeTimer()
-            }
+    private var currentDuration: TimeInterval {
+        switch state {
+        case .work:
+            return workDuration
+        case .shortBreak:
+            return shortBreakDuration
+        case .longBreak:
+            return longBreakDuration
         }
     }
 
+    var timeRemainingFormatted: String {
+        let minutes = Int(timeRemaining) / 60
+        let seconds = Int(timeRemaining) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    init() {
+        setupInitialState()
+        setupSettingsObserver()
+        NotificationManager.shared.requestAuthorization()
+    }
+
+    private func setupInitialState() {
+        timeRemaining = currentDuration
+    }
+
+    private func setupSettingsObserver() {
+        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                if !self.isRunning {
+                    self.timeRemaining = self.currentDuration
+                }
+            }
+            .store(in: &cancellables)
+    }
+
     func startTimer() {
+        if timeRemaining <= 0 {
+            resetTimer()
+        }
+
         isRunning = true
         startTime = Date()
 
-        timer = Timer.publish(every: 0.1, on: .main, in: .common)
-            .autoconnect()
-            .sink { [weak self] _ in
-                self?.updateTimer()
-            }
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            self?.updateTimer()
+        }
     }
 
     func pauseTimer() {
         isRunning = false
-        timer?.cancel()
+        timer?.invalidate()
         timer = nil
     }
 
     func resetTimer() {
         pauseTimer()
-        timeRemaining = state.duration
+        timeRemaining = currentDuration
         progress = 0
-    }
-
-    func skipToNext() {
-        switch state {
-        case .work:
-            state = .shortBreak
-        case .shortBreak:
-            state = .work
-        case .longBreak:
-            state = .work
-        }
-        resetTimer()
     }
 
     private func updateTimer() {
         guard let startTime = startTime else { return }
-        let elapsedTime = Date().timeIntervalSince(startTime)
-        timeRemaining = max(0, state.duration - elapsedTime)
-        progress = 1 - (timeRemaining / state.duration)
 
-        if timeRemaining == 0 {
-            completeTimer()
+        let elapsedTime = Date().timeIntervalSince(startTime)
+        timeRemaining = max(currentDuration - elapsedTime, 0)
+        progress = 1 - (timeRemaining / currentDuration)
+
+        if timeRemaining <= 0 {
+            handleTimerCompletion()
         }
     }
 
-    private func completeTimer() {
+    private func handleTimerCompletion() {
         pauseTimer()
-        progress = 1
-        timeRemaining = 0
+        playCompletionSound()
+        scheduleNotification()
 
+        if state == .work {
+            completedPomodoros += 1
+        }
+
+        moveToNextState()
+
+        // Auto-start next session if enabled
+        if (state == .work && autoStartPomodoros)
+            || ((state == .shortBreak || state == .longBreak) && autoStartBreaks)
+        {
+            startTimer()
+        }
+    }
+
+    private func moveToNextState() {
+        switch state {
+        case .work:
+            state = shouldTakeLongBreak() ? .longBreak : .shortBreak
+        case .shortBreak, .longBreak:
+            state = .work
+        }
+        timeRemaining = currentDuration
+        progress = 0
+    }
+
+    private func shouldTakeLongBreak() -> Bool {
+        return completedPomodoros % pomodorosUntilLongBreak == 0
+    }
+
+    private func playCompletionSound() {
         #if os(iOS)
-            // Play haptic feedback
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-
-            // Schedule local notification if in background
-            if UIApplication.shared.applicationState == .background {
-                let content = UNMutableNotificationContent()
-                content.title = "\(state.title) Completed"
-                content.body = "Time to take a break!"
-                content.sound = .default
-
-                let request = UNNotificationRequest(
-                    identifier: UUID().uuidString,
-                    content: content,
-                    trigger: nil
-                )
-
-                UNUserNotificationCenter.current().add(request)
-            }
+            SoundManager.shared.playCompletionSound()
         #endif
     }
-}
 
-// MARK: - Time Formatting
-extension TimerViewModel {
-    var timeRemainingFormatted: String {
-        let minutes = Int(timeRemaining) / 60
-        let seconds = Int(timeRemaining) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+    private func scheduleNotification() {
+        let title = "\(state.title) Completed"
+        let message = getNotificationMessage()
+        NotificationManager.shared.scheduleTimerCompletionNotification(
+            title: title, message: message)
+    }
+
+    private func getNotificationMessage() -> String {
+        switch state {
+        case .work:
+            return "Great job! Time for a break."
+        case .shortBreak:
+            return "Break's over! Time to focus."
+        case .longBreak:
+            return "Long break completed. Ready for the next session?"
+        }
+    }
+
+    func handleForegroundTransition() {
+        if isRunning {
+            updateTimer()
+        }
+    }
+
+    func handleBackgroundTransition() {
+        // Handle background state if needed
     }
 }
 

@@ -10,19 +10,86 @@ struct TimerCircleView: View {
     let onReset: () -> Void
     let onAddTask: () -> Void
 
+    @State private var isAnimating = false
+    @State private var rotationAngle: Double = 0
+
     private var progressColor: Color {
-        let stateColors = state.colors
-
-        return Color.black
-
+        switch state {
+        case .work:
+            return Color.timerColors.workStart
+        case .shortBreak:
+            return Color.timerColors.shortBreakStart
+        case .longBreak:
+            return Color.timerColors.longBreakStart
+        }
     }
 
-    // MARK: - Subviews
+    private var gradientColors: [Color] {
+        switch state {
+        case .work:
+            return [Color.timerColors.workStart, Color.timerColors.workEnd]
+        case .shortBreak:
+            return [Color.timerColors.shortBreakStart, Color.timerColors.shortBreakEnd]
+        case .longBreak:
+            return [Color.timerColors.longBreakStart, Color.timerColors.longBreakEnd]
+        }
+    }
+
+    private func markerText(for minute: Int, totalDuration: Int) -> String {
+        if minute == 0 {
+            return "START"
+        } else if minute == totalDuration {
+            return "END"
+        } else {
+            return "\(minute)"
+        }
+    }
+
+    private func TimerMarkers(radius: CGFloat, totalDuration: Int) -> some View {
+        let markerCount = totalDuration + 1
+        return ZStack {
+            ForEach(0..<markerCount) { index in
+                let angle = Double(index) / Double(markerCount - 1) * 2 * .pi - .pi / 2
+                let markerRadius = radius - 30
+                let x = cos(angle) * markerRadius
+                let y = sin(angle) * markerRadius
+
+                Text(markerText(for: index, totalDuration: totalDuration))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .position(x: x + radius, y: y + radius)
+                    .rotationEffect(.degrees(-rotationAngle))
+            }
+        }
+    }
+
+    private func TimerRing(radius: CGFloat) -> some View {
+        Circle()
+            .trim(from: 0, to: progress)
+            .stroke(
+                LinearGradient(
+                    colors: gradientColors,
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                style: StrokeStyle(lineWidth: 12, lineCap: .round)
+            )
+            .frame(width: radius * 2, height: radius * 2)
+            .rotationEffect(.degrees(-90))
+            .rotation3DEffect(.degrees(isAnimating ? 360 : 0), axis: (x: 0, y: 1, z: 0))
+            .animation(
+                .spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0.3),
+                value: isAnimating
+            )
+    }
+
     private func TimerDisplay() -> some View {
         VStack(spacing: 8) {
             Text(timeRemaining)
-                .foregroundColor(.white)
                 .font(Font.custom("Bungee-Regular", size: 72))
+                .monospacedDigit()
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2)
 
             Text(state.rawValue.uppercased())
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -30,70 +97,27 @@ struct TimerCircleView: View {
         }
     }
 
-    private func TimerNumbers(radius: CGFloat) -> some View {
-        ForEach(0..<60) { index in
-            if index % 5 == 0 {
-                let minutes = index / 5 * 5
-                let angle = Double(index) / 60.0 * 2 * .pi - .pi / 2
-                let radius = (radius / 2) - 20
-                let x = cos(angle) * radius + radius
-                let y = sin(angle) * radius + radius
-
-                Text("\(minutes)")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .position(x: x, y: y)
-            }
-        }
-    }
-
-    private func QuadrantLines(radius: CGFloat) -> some View {
-        Path { path in
-            path.move(to: CGPoint(x: radius, y: 0))
-            path.addLine(to: CGPoint(x: radius, y: radius * 2))
-            path.move(to: CGPoint(x: 0, y: radius))
-            path.addLine(to: CGPoint(x: radius * 2, y: radius))
-        }
-        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-    }
-
     private func ControlButtons() -> some View {
         HStack(spacing: 24) {
-            ControlButton(
-                icon: isRunning ? "pause.fill" : "play.fill",
-                color: progressColor,
-                action: isRunning ? onPause : onStart
-            )
             ControlButton(
                 icon: "arrow.counterclockwise",
                 color: progressColor,
                 action: onReset
             )
+
+            ControlButton(
+                icon: isRunning ? "pause.fill" : "play.fill",
+                color: progressColor,
+                action: isRunning ? onPause : onStart
+            )
+            .scaleEffect(1.2)
+
+            ControlButton(
+                icon: "plus",
+                color: progressColor,
+                action: onAddTask
+            )
         }
-        .padding(.top, 40)
-    }
-
-    private func FocusCard() -> some View {
-        HStack {
-            Image(systemName: "timer")
-
-                .font(.title2)
-                .font(Font.custom("Bungee-Regular", size: 24))
-
-            VStack(alignment: .leading) {
-                Text("Focus Timer Active")
-                    .font(.headline)
-                Text("Want to track your progress?")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            Spacer()
-        }
-        .padding()
-        .background()
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: 5)
-        .padding(.horizontal)
     }
 
     var body: some View {
@@ -113,23 +137,26 @@ struct TimerCircleView: View {
                             .offset(x: -circleRadius / 2, y: -circleRadius)
                             .shadow(color: progressColor.opacity(0.3), radius: 15, x: 0, y: 10)
 
-                        TimerNumbers(radius: circleRadius * 1.1)
+                        // Timer
                         TimerDisplay().offset(x: -circleRadius / 2, y: -circleRadius / 2)
+                        
+                        
                     }
                     .frame(height: circleRadius * 2)
                     .padding(.top, 40)
 
                     VStack(spacing: 32) {
                         ControlButtons()
-                        FocusCard()
+                        
                     }
                     .padding(.bottom, 40)
                 }
             }
         }
-        .background()
+        .ignoresSafeArea()
     }
 }
+
 
 // MARK: - Control Button
 struct ControlButton: View {
@@ -137,47 +164,27 @@ struct ControlButton: View {
     let color: Color
     let action: () -> Void
 
-    @State private var isHovered = false
+    @State private var isPressed = false
 
     var body: some View {
         Button(action: action) {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [color, color.opacity(0.8)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 64, height: 64)
-                .overlay(
-                    Image(systemName: icon)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(.white)
-                )
-                .overlay(
-                    Circle()
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-                .shadow(color: color.opacity(0.3), radius: 10, x: 0, y: 5)
-                .scaleEffect(isHovered ? 1.05 : 1.0)
-        }
-        .buttonStyle(ScaleButtonStyle())
-        .onHover { hovering in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isHovered = hovering
+            ZStack {
+                Circle()
+                    .fill(color)
+                    .shadow(color: color.opacity(0.3), radius: 10, x: 0, y: 5)
+
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
             }
         }
+        .frame(width: 60, height: 60)
+        .scaleEffect(isPressed ? 0.95 : 1)
+        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
+        .pressEvents(onPress: { isPressed = true }, onRelease: { isPressed = false })
     }
 }
 
-struct ScaleButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isPressed)
-    }
-}
 
 #if DEBUG
     struct TimerCircleView_Previews: PreviewProvider {
@@ -185,7 +192,7 @@ struct ScaleButtonStyle: ButtonStyle {
             TimerCircleView(
                 progress: 0.7,
                 timeRemaining: "15:00",
-                state: .shortBreak,
+                state: .work,
                 isRunning: false,
                 onStart: {},
                 onPause: {},

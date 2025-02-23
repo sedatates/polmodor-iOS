@@ -11,43 +11,57 @@ struct SettingsView: View {
     @AppStorage("playSound") private var playSound = true
     
     var body: some View {
-        Form {
-            Section("Timer Durations") {
-                Stepper("Work: \(workDuration) minutes", value: $workDuration, in: 15...60, step: 5)
-                Stepper("Short Break: \(shortBreakDuration) minutes", value: $shortBreakDuration, in: 3...15)
-                Stepper("Long Break: \(longBreakDuration) minutes", value: $longBreakDuration, in: 10...30, step: 5)
-                Stepper("Pomodoros until Long Break: \(pomodorosUntilLongBreak)", value: $pomodorosUntilLongBreak, in: 2...6)
-            }
-            
-            Section("Automation") {
-                Toggle("Auto-start Breaks", isOn: $autoStartBreaks)
-                Toggle("Auto-start Pomodoros", isOn: $autoStartPomodoros)
-            }
-            
-            Section("Notifications") {
-                Toggle("Show Notifications", isOn: $showNotifications)
-                Toggle("Play Sound", isOn: $playSound)
-            }
-            
-            Section {
-                Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
-                    Label("Notification Settings", systemImage: "bell.badge")
+        NavigationView {
+            Form {
+                Section("Timer Durations") {
+                    Stepper("Work: \(workDuration) minutes", value: $workDuration, in: 15...60, step: 5)
+                    Stepper("Short Break: \(shortBreakDuration) minutes", value: $shortBreakDuration, in: 3...15)
+                    Stepper("Long Break: \(longBreakDuration) minutes", value: $longBreakDuration, in: 10...30, step: 5)
+                    Stepper("Pomodoros until Long Break: \(pomodorosUntilLongBreak)", value: $pomodorosUntilLongBreak, in: 2...6)
                 }
                 
-                Link(destination: URL(string: "https://github.com/yourusername/polmodor/issues")!) {
-                    Label("Report an Issue", systemImage: "exclamationmark.bubble")
+                Section("Automation") {
+                    Toggle("Auto-start Breaks", isOn: $autoStartBreaks)
+                    Toggle("Auto-start Pomodoros", isOn: $autoStartPomodoros)
                 }
-            }
-            
-            Section {
-                NavigationLink {
-                    AboutView()
-                } label: {
-                    Label("About", systemImage: "info.circle")
+                
+                Section("Notifications") {
+                    Toggle("Show Notifications", isOn: $showNotifications)
+                    Toggle("Play Sound", isOn: $playSound)
+                }
+                
+                Section {
+                    Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
+                        Label("Notification Settings", systemImage: "bell.badge")
+                    }
+                    
+                    Link(destination: URL(string: "https://github.com/yourusername/polmodor/issues")!) {
+                        Label("Report an Issue", systemImage: "exclamationmark.bubble")
+                    }
+                }
+                
+                Section {
+                    NavigationLink(destination: AboutView(), label: {
+                        Label("About Polmodor", systemImage: "info.circle")
+                    })
+                }
+                
+                Section {
+                    Button("Reset to Defaults") {
+                        workDuration = 25
+                        shortBreakDuration = 5
+                        longBreakDuration = 15
+                        pomodorosUntilLongBreak = 4
+                        autoStartBreaks = false
+                        autoStartPomodoros = false
+                        showNotifications = true
+                        playSound = true
+                    }
                 }
             }
         }
         .navigationTitle("Settings")
+        .navigationSplitViewStyle(BalancedNavigationSplitViewStyle())
     }
 }
 
@@ -56,10 +70,12 @@ struct AboutView: View {
         List {
             Section {
                 VStack(spacing: 16) {
-                    Image("AppIcon")
+                    Image(.polmodorIcon)
+                        .renderingMode(.original)
                         .resizable()
+                        .aspectRatio(contentMode: .fit)
                         .frame(width: 100, height: 100)
-                        .cornerRadius(22)
+                    
                     
                     Text("Polmodor")
                         .font(.title.bold())
@@ -88,8 +104,10 @@ struct AboutView: View {
             }
             
             Section {
-                Text("© 2024 Your Name. All rights reserved.")
+                //Date Year
+                Text("© \(Image(systemName: "copyright")) Sedat Ates")
                     .foregroundStyle(.secondary)
+                    
             }
         }
         .navigationTitle("About")

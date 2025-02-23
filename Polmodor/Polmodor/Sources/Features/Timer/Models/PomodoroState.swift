@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-public enum PomodoroState: String, CaseIterable {
+enum PomodoroState: String {
     case work = "Work"
     case shortBreak = "Short Break"
     case longBreak = "Long Break"
@@ -11,7 +11,7 @@ public enum PomodoroState: String, CaseIterable {
         public let middle: Color
         public let end: Color
     }
-    
+
     public var colors: Colors {
         switch self {
         case .work:
@@ -34,42 +34,21 @@ public enum PomodoroState: String, CaseIterable {
             )
         }
     }
-    
-    
-    
-    public var description: String {
-        self.rawValue
+
+    var title: String {
+        switch self {
+        case .work:
+            return "Focus Time"
+        case .shortBreak:
+            return "Short Break"
+        case .longBreak:
+            return "Long Break"
+        }
     }
 
-    public var title: String {
+    var description: String {
         self.rawValue
     }
-    
-    
-    
-
-//    public var colors: Colors {
-//        switch self {
-//        case .work:
-//            return Colors(
-//                start: .init("#FF6B6B"),
-//                middle: .init("#FA5252"),
-//                end: .init("#F03E3E")
-//            )
-//        case .shortBreak:
-//            return Colors(
-//                start: .init("#4DABF7"),
-//                middle: .init("#339AF0"),
-//                end: .init("#228BE6")
-//            )
-//        case .longBreak:
-//            return Colors(
-//                start: .init("#51CF66"),
-//                middle: .init("#40C057"),
-//                end: .init("#2F9E44")
-//            )
-//        }
-//    }
 
     public var duration: TimeInterval {
         switch self {
