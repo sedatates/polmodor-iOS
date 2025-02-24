@@ -4,7 +4,7 @@ import SwiftUI
 struct PolmodorApp: App {
     @StateObject private var timerViewModel = TimerViewModel()
     @StateObject private var taskViewModel = TaskViewModel()
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -16,7 +16,7 @@ struct PolmodorApp: App {
 
 class AppState: ObservableObject {
     @Published var selectedTab: Tab = .timer
-    
+
     enum Tab {
         case timer
         case tasks

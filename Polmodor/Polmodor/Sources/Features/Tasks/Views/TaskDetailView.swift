@@ -1,66 +1,128 @@
 import SwiftUI
 
 struct TaskDetailView: View {
+    @EnvironmentObject var taskViewModel: TaskViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var task: PolmodorTask
-    private let onUpdate: (PolmodorTask) -> Void
+    @State private var isEditing = false
     
-    init(task: PolmodorTask, onUpdate: @escaping (PolmodorTask) -> Void) {
+    init(task: PolmodorTask) {
         _task = State(initialValue: task)
-        self.onUpdate = onUpdate
     }
     
     var body: some View {
-        Form {
-            Section {
-                TextField("Title", text: $task.title)
-                TextEditor(text: $task.description)
-                    .frame(minHeight: 100)
+        List {
+            
+            HStack {
+                Image(systemName: task.iconName)
+                    .foregroundColor(task.categoryColor)
+                Text(task.title)
+                    .font(.headline)
             }
             
-            Section("Pomodoros") {
-                Stepper("Count: \(task.pomodoroCount)", value: $task.pomodoroCount, in: 1...10)
-                Stepper("Completed: \(task.completedPomodoros)", value: $task.completedPomodoros, in: 0...task.pomodoroCount)
-                
-                ProgressView(value: task.progress)
-                    .tint(task.status == .completed ? .green : .accentColor)
+            if !task.description.isEmpty {
+                Text(task.description)
+                    .foregroundColor(.secondary)
             }
             
-            Section {
-                Picker("Status", selection: $task.status) {
-                    ForEach(PolmodorTask.TaskStatus.allCases, id: \.self) { status in
-                        Label(status.rawValue, systemImage: status.systemImage)
-                            .tag(status)
+            HStack {
+                Label("Category", systemImage: task.category.iconName)
+                Spacer()
+                Text(task.category.rawValue.capitalized)
+                    .foregroundColor(task.categoryColor)
+            }
+            
+            HStack {
+                Label("Priority", systemImage: task.iconName)
+                Spacer()
+                Text(task.priority.rawValue.capitalized)
+                    .foregroundColor(task.priority.color)
+            }
+            
+            if !task.subTasks.isEmpty {
+                HStack {
+                    Label("Progress", systemImage: "chart.pie.fill")
+                    Spacer()
+                    Text("\(Int(task.progress * 100))%")
+                }
+            }
+            
+            
+            if !task.subTasks.isEmpty {
+                Section(header: Text("Subtasks")) {
+                    ForEach(task.subTasks) { subtask in
+                        HStack {
+                            Button(action: { taskViewModel.toggleSubtaskCompletion(subtask) }) {
+                                Image(
+                                    systemName: subtask.completed
+                                    ? "checkmark.circle.fill" : "circle"
+                                )
+                                .foregroundColor(subtask.completed ? .green : .gray)
+                            }
+                            
+                            VStack(alignment: .leading) {
+                                Text(subtask.title)
+                                    .strikethrough(subtask.completed)
+                                Text(
+                                    "\(subtask.pomodoro.completed)/\(subtask.pomodoro.total) Pomodoros"
+                                )
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            }
+                        }
                     }
                 }
             }
             
-            Section {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Created")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(task.createdAt.formatted())
+            Section(header: Text("Time Management")) {
+                HStack {
+                    Label("Time Spent", systemImage: "clock")
+                    Spacer()
+                    Text(formatTime(task.timeSpent))
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Last Updated")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(task.updatedAt.formatted())
+                HStack {
+                    Label("Time Remaining", systemImage: "timer")
+                    Spacer()
+                    Text(formatTime(task.timeRemaining))
+                }
+                
+                if let completedAt = task.completedAt {
+                    HStack {
+                        Label("Completed", systemImage: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Spacer()
+                        Text(formatDate(completedAt))
+                    }
                 }
             }
         }
         .navigationTitle("Task Details")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Done") {
-                    onUpdate(task)
-                    dismiss()
-                }
+        .navigationBarItems(
+            trailing: Button("Edit") {
+                isEditing = true
+            }
+        )
+        .sheet(isPresented: $isEditing) {
+            TaskFormView(task: task) { updatedTask in
+                taskViewModel.updateTask(updatedTask)
+                task = updatedTask
+                isEditing = false
             }
         }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        let hours = Int(seconds) / 3600
+        let minutes = Int(seconds) / 60 % 60
+        return String(format: "%dh %dm", hours, minutes)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
@@ -69,10 +131,26 @@ struct TaskDetailView: View {
         TaskDetailView(
             task: PolmodorTask(
                 title: "Sample Task",
-                description: "This is a sample task description",
-                pomodoroCount: 4,
-                completedPomodoros: 2
-            )
-        ) { _ in }
+                description: "This is a sample task for preview",
+                iconName: "star.fill",
+                category: .work,
+                priority: .high,
+                timeSpent: 3600,
+                timeRemaining: 7200,
+                subTasks: [
+                    PolmodorSubTask(
+                        id: UUID(),
+                        title: "Subtask 1",
+                        completed: true,
+                        pomodoro: .init(total: 2, completed: 1)
+                    ),
+                    PolmodorSubTask(
+                        id: UUID(),
+                        title: "Subtask 2",
+                        completed: false,
+                        pomodoro: .init(total: 3, completed: 0)
+                    ),
+                ]
+            ))
     }
-} 
+}
