@@ -1,117 +1,143 @@
+import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("workDuration") private var workDuration = 25
-    @AppStorage("shortBreakDuration") private var shortBreakDuration = 5
-    @AppStorage("longBreakDuration") private var longBreakDuration = 15
-    @AppStorage("pomodorosUntilLongBreak") private var pomodorosUntilLongBreak = 4
-    @AppStorage("autoStartBreaks") private var autoStartBreaks = false
-    @AppStorage("autoStartPomodoros") private var autoStartPomodoros = false
-    @AppStorage("showNotifications") private var showNotifications = true
-    @AppStorage("playSound") private var playSound = true
-    @AppStorage("zenModeEnabled") private var zenModeEnabled = false
-    @AppStorage("zenModeDelay") private var zenModeDelay = 3.0  // seconds
+    @Environment(\.modelContext) private var modelContext
+    @Query private var settingsModels: [SettingsModel]
+
+    private var settings: SettingsModel {
+        // Ensure we always have a settings model
+        if let firstSettings = settingsModels.first {
+            return firstSettings
+        } else {
+            let newSettings = SettingsModel()
+            modelContext.insert(newSettings)
+            return newSettings
+        }
+    }
+
+    // Bindings for the settings properties
+    private var workDuration: Binding<Int> {
+        Binding(
+            get: { self.settings.workDuration },
+            set: { self.settings.workDuration = $0 }
+        )
+    }
+
+    private var shortBreakDuration: Binding<Int> {
+        Binding(
+            get: { self.settings.shortBreakDuration },
+            set: { self.settings.shortBreakDuration = $0 }
+        )
+    }
+
+    private var longBreakDuration: Binding<Int> {
+        Binding(
+            get: { self.settings.longBreakDuration },
+            set: { self.settings.longBreakDuration = $0 }
+        )
+    }
+
+    private var pomodorosUntilLongBreak: Binding<Int> {
+        Binding(
+            get: { self.settings.pomodorosUntilLongBreak },
+            set: { self.settings.pomodorosUntilLongBreak = $0 }
+        )
+    }
+
+    private var autoStartBreaks: Binding<Bool> {
+        Binding(
+            get: { self.settings.autoStartBreaks },
+            set: { self.settings.autoStartBreaks = $0 }
+        )
+    }
+
+    private var autoStartPomodoros: Binding<Bool> {
+        Binding(
+            get: { self.settings.autoStartPomodoros },
+            set: { self.settings.autoStartPomodoros = $0 }
+        )
+    }
+
+    private var isNotificationEnabled: Binding<Bool> {
+        Binding(
+            get: { self.settings.isNotificationEnabled },
+            set: { self.settings.isNotificationEnabled = $0 }
+        )
+    }
+
+    private var isSoundEnabled: Binding<Bool> {
+        Binding(
+            get: { self.settings.isSoundEnabled },
+            set: { self.settings.isSoundEnabled = $0 }
+        )
+    }
+
+    private var isDarkModeEnabled: Binding<Bool> {
+        Binding(
+            get: { self.settings.isDarkModeEnabled },
+            set: { self.settings.isDarkModeEnabled = $0 }
+        )
+    }
 
     var body: some View {
         List {
             Group {
                 Section("Timer Durations") {
                     Stepper(
-                        "Work: \(workDuration) minutes",
-                        value: $workDuration,
+                        "Work: \(settings.workDuration) minutes",
+                        value: workDuration,
                         in: 15...60,
                         step: 5
                     )
                     .padding(.vertical, 4)
 
                     Stepper(
-                        "Short Break: \(shortBreakDuration) minutes",
-                        value: $shortBreakDuration,
-                        in: 3...15
+                        "Short Break: \(settings.shortBreakDuration) minutes",
+                        value: shortBreakDuration,
+                        in: 5...15,
+                        step: 5
                     )
                     .padding(.vertical, 4)
 
                     Stepper(
-                        "Long Break: \(longBreakDuration) minutes",
-                        value: $longBreakDuration,
+                        "Long Break: \(settings.longBreakDuration) minutes",
+                        value: longBreakDuration,
                         in: 10...30,
                         step: 5
                     )
                     .padding(.vertical, 4)
 
                     Stepper(
-                        "Pomodoros until Long Break: \(pomodorosUntilLongBreak)",
-                        value: $pomodorosUntilLongBreak,
-                        in: 2...6
+                        "Pomodoros Until Long Break: \(settings.pomodorosUntilLongBreak)",
+                        value: pomodorosUntilLongBreak,
+                        in: 4...10,
+                        step: 1
                     )
                     .padding(.vertical, 4)
                 }
 
-                Section {
-                    VStack(spacing: 16) {
-                        // Zen Mode Feature
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Image(systemName: "moon.stars")
-                                    .font(.title2)
-                                    .foregroundColor(.purple)
-                                Text("Zen Mode")
-                                    .font(.headline)
-                                Spacer()
-                                Toggle("", isOn: $zenModeEnabled)
-                                    .tint(.purple)
-                            }
-
-                            if zenModeEnabled {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(
-                                        "Controls will fade away after inactivity to help you stay focused."
-                                    )
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.leading, 30)
-
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            Text("Fade Delay: \(Int(zenModeDelay))s")
-                                                .font(.subheadline.weight(.medium))
-                                            Spacer()
-                                        }
-                                        .padding(.leading, 30)
-
-                                        Slider(value: $zenModeDelay, in: 5...10, step: 1)
-                                            .tint(.purple)
-                                            .padding(.leading, 30)
-                                    }
-                                }
-                            }
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color(.systemBackground))
-                                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        )
-                    }
-                    .padding(.vertical, 8)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                } header: {
-                    Text("Focus Features")
-                }
-
                 Section("Automation") {
-                    Toggle("Auto-start Breaks", isOn: $autoStartBreaks)
+                    Toggle("Auto-start Breaks", isOn: autoStartBreaks)
                         .padding(.vertical, 2)
-                    Toggle("Auto-start Pomodoros", isOn: $autoStartPomodoros)
+                    Toggle("Auto-start Pomodoros", isOn: autoStartPomodoros)
                         .padding(.vertical, 2)
                 }
 
                 Section("Notifications") {
-                    Toggle("Show Notifications", isOn: $showNotifications)
+                    Toggle("Show Notifications", isOn: isNotificationEnabled)
                         .padding(.vertical, 2)
-                    Toggle("Play Sound", isOn: $playSound)
+                    Toggle("Play Sound", isOn: isSoundEnabled)
                         .padding(.vertical, 2)
+                }
+
+                Section("Appearance") {
+                    Toggle("Dark Mode", isOn: isDarkModeEnabled)
+                        .padding(.vertical, 2)
+                        .onChange(of: settings.isDarkModeEnabled) { _, newValue in
+                            // Apply theme change
+                            setAppearance(darkMode: newValue)
+                        }
                 }
 
                 Section {
@@ -140,16 +166,7 @@ struct SettingsView: View {
 
                 Section {
                     Button("Reset to Defaults") {
-                        workDuration = 25
-                        shortBreakDuration = 5
-                        longBreakDuration = 15
-                        pomodorosUntilLongBreak = 4
-                        autoStartBreaks = false
-                        autoStartPomodoros = false
-                        showNotifications = true
-                        playSound = true
-                        zenModeEnabled = false
-                        zenModeDelay = 3.0
+                        resetToDefaults()
                     }
                     .padding(.vertical, 2)
                 }
@@ -160,6 +177,29 @@ struct SettingsView: View {
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 100)
         }
+    }
+
+    private func resetToDefaults() {
+        settings.workDuration = 25
+        settings.shortBreakDuration = 5
+        settings.longBreakDuration = 15
+        settings.pomodorosUntilLongBreak = 4
+        settings.autoStartBreaks = false
+        settings.autoStartPomodoros = false
+        settings.isNotificationEnabled = true
+        settings.isSoundEnabled = true
+        settings.isDarkModeEnabled = false
+
+        // Apply theme change if needed
+        setAppearance(darkMode: false)
+    }
+
+    private func setAppearance(darkMode: Bool) {
+        #if os(iOS)
+            // Apply appearance change
+            UIApplication.shared.windows.first?.overrideUserInterfaceStyle =
+                darkMode ? .dark : .light
+        #endif
     }
 }
 
@@ -228,5 +268,6 @@ struct AboutView: View {
 #Preview {
     NavigationStack {
         SettingsView()
+            .modelContainer(for: SettingsModel.self)
     }
 }

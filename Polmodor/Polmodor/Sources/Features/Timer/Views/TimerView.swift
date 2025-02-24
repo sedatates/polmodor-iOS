@@ -9,22 +9,16 @@ private final class Storage: ObservableObject {
 // MARK: - Main Timer View
 struct TimerView: View {
     @EnvironmentObject var viewModel: TimerViewModel
-    @Environment(\.tabBarVisibility) private var tabBarVisibility
-    @AppStorage("zenModeEnabled") private var zenModeEnabled = false
-    @AppStorage("zenModeDelay") private var zenModeDelay = 3.0
 
     // MARK: - State
     @State private var showUnlockAlert = false
     @State private var isLocked = false
-    @State private var showControls = true
-    @State private var lastInteraction = Date()
     @State private var dragAmount = CGSize.zero
     @State private var isUnlocked = false
     @GestureState private var isDragging = false
     private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
     @StateObject private var storage = Storage()
-    @StateObject private var zenModeController = ZenModeController()
 
     var body: some View {
         GeometryReader { geometry in
@@ -42,14 +36,12 @@ struct TimerView: View {
                         geometry: geometry
                     )
 
-                    if showControls {
-                        TimerControlsView(
-                            viewModel: viewModel,
-                            isLocked: isLocked,
-                            showUnlockAlert: $showUnlockAlert
-                        )
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+                    TimerControlsView(
+                        viewModel: viewModel,
+                        isLocked: isLocked,
+                        showUnlockAlert: $showUnlockAlert
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
 
                     Spacer()
                 }
@@ -60,7 +52,6 @@ struct TimerView: View {
             .onChange(of: viewModel.isRunning) { oldValue, newValue in
                 handleTimerStateChange(newValue)
             }
-            .onTapGesture { handleTapGesture() }
         }
         .alert("Unlock Timer Controls?", isPresented: $showUnlockAlert) {
             UnlockAlertButtons(
@@ -77,28 +68,17 @@ struct TimerView: View {
     // MARK: - Private Methods
     private func setupInitialState() {
         isLocked = viewModel.isRunning
-        zenModeController.setup(
-            zenModeEnabled: zenModeEnabled,
-            zenModeDelay: zenModeDelay,
-            onStateChange: { showControls = $0 }
-        )
     }
 
     private func handleUnlock() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             isLocked = false
-            showControls = true
-            tabBarVisibility.setVisible(true)
         }
     }
 
     private func handleLock() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             isLocked = true
-            if zenModeEnabled {
-                showControls = false
-                tabBarVisibility.setVisible(false)
-            }
         }
     }
 
@@ -114,17 +94,6 @@ struct TimerView: View {
         if isRunning {
             handleLock()
         }
-    }
-
-    private func handleTapGesture() {
-        lastInteraction = Date()
-        if zenModeEnabled && !showControls {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showControls = true
-                tabBarVisibility.setVisible(true)
-            }
-        }
-        zenModeController.resetTimer()
     }
 }
 
@@ -261,7 +230,6 @@ struct UnlockAlertButtons: View {
     @ObservedObject var viewModel: TimerViewModel
     @Binding var isLocked: Bool
     let onUnlock: () -> Void
-    @Environment(\.tabBarVisibility) private var tabBarVisibility
 
     var body: some View {
         Group {
@@ -270,7 +238,6 @@ struct UnlockAlertButtons: View {
                 viewModel.pauseTimer()
                 withAnimation(.spring()) {
                     isLocked = false
-                    tabBarVisibility.setVisible(true)
                 }
             }
         }
@@ -281,6 +248,4 @@ struct UnlockAlertButtons: View {
 #Preview {
     TimerView()
         .environmentObject(TimerViewModel())
-        .environment(\.tabBarVisibility, TabBarVisibility())
-        .environment(\.isTimerActiveLock, false)
 }

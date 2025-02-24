@@ -1,43 +1,15 @@
 import SwiftData
 import SwiftUI
 
-private struct IsTimerActiveLockKey: EnvironmentKey {
-    static let defaultValue: Bool = false
-}
-
-private struct ForceLockKey: EnvironmentKey {
-    static let defaultValue: Bool = false
-}
-
-extension EnvironmentValues {
-    var isTimerActiveLock: Bool {
-        get { self[IsTimerActiveLockKey.self] }
-        set { self[IsTimerActiveLockKey.self] = newValue }
-    }
-
-    var forceLockEnabled: Bool {
-        get { self[ForceLockKey.self] }
-        set { self[ForceLockKey.self] = newValue }
-    }
-}
-
 struct ContentView: View {
     @EnvironmentObject var timerViewModel: TimerViewModel
     @State private var selectedTab: Tab = .timer
-    @Namespace private var namespace
-    @AppStorage("forceLockEnabled") private var forceLockEnabled = false
-    @Environment(\.isTimerActiveLock) private var isTimerActiveLock
-    @StateObject private var tabBarVisibility = TabBarVisibility()
-    @AppStorage("zenModeEnabled") private var zenModeEnabled = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
                 TimerView()
                     .environmentObject(timerViewModel)
-                    .environment(\.tabBarVisibility, tabBarVisibility)
-                    .environment(\.forceLockEnabled, forceLockEnabled)
-                    .environment(\.isTimerActiveLock, isTimerActiveLock)
                     .tag(Tab.timer)
 
                 NavigationStack {
@@ -51,36 +23,19 @@ struct ContentView: View {
                 .tag(Tab.settings)
             }
             .safeAreaInset(edge: .bottom) {
-                if tabBarVisibility.isVisible || selectedTab != .timer {
-                    ModernTabBar(selectedTab: $selectedTab)
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
-                        .allowsHitTesting(
-                            !isTimerActiveLock || !forceLockEnabled || selectedTab != .timer
-                        )
-                        .opacity(
-                            isTimerActiveLock && forceLockEnabled && selectedTab == .timer ? 0.5 : 1
-                        )
-                        .transition(.move(edge: .bottom))
-                }
-            }
-            .onChange(of: selectedTab) { oldValue, newValue in
-                if newValue != .timer {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        tabBarVisibility.setVisible(true)
-                    }
-                }
+
+                ModernTabBar(selectedTab: $selectedTab)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+
             }
         }
-        .environment(\.forceLockEnabled, forceLockEnabled)
     }
 }
 
 struct ModernTabBar: View {
     @Binding var selectedTab: ContentView.Tab
     @Namespace private var animation
-    @Environment(\.isTimerActiveLock) private var isTimerActiveLock
-    @Environment(\.forceLockEnabled) private var forceLockEnabled
 
     var body: some View {
         HStack {
@@ -93,13 +48,6 @@ struct ModernTabBar: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.white)
                 .shadow(color: .black.opacity(0.05), radius: 15, x: 0, y: 5)
-        }
-        .overlay {
-            if isTimerActiveLock && forceLockEnabled {
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .allowsHitTesting(false)
-            }
         }
     }
 }
@@ -124,6 +72,7 @@ struct TabButton: View {
                 Text(tab.title)
                     .font(.system(size: 12, weight: selectedTab == tab ? .medium : .regular))
                     .foregroundStyle(selectedTab == tab ? tab.color : .gray.opacity(0.5))
+
             }
             .frame(height: 55)
         }
@@ -162,9 +111,9 @@ extension ContentView {
 
         var color: Color {
             switch self {
-            case .timer: return .blue
-            case .tasks: return .blue
-            case .settings: return .blue
+            case .timer: return Color(hex: "FF5722")
+            case .tasks: return Color(hex: "4CAF50")
+            case .settings: return Color(hex: "FFC107")
             }
         }
     }
@@ -173,6 +122,4 @@ extension ContentView {
 #Preview {
     ContentView()
         .environmentObject(TimerViewModel())
-        .environment(\.forceLockEnabled, false)
-        .environment(\.isTimerActiveLock, false)
 }
