@@ -197,8 +197,11 @@ struct SettingsView: View {
     private func setAppearance(darkMode: Bool) {
         #if os(iOS)
             // Apply appearance change
-            UIApplication.shared.windows.first?.overrideUserInterfaceStyle =
-                darkMode ? .dark : .light
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                let window = windowScene.windows.first
+            {
+                window.overrideUserInterfaceStyle = darkMode ? .dark : .light
+            }
         #endif
     }
 }

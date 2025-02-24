@@ -16,6 +16,7 @@ enum ModelContainerSetup {
             PolmodorTask.self,
             PolmodorSubTask.self,
             TaskCategory.self,
+            SettingsModel.self,
         ])
 
         let modelConfiguration = ModelConfiguration(
@@ -35,6 +36,17 @@ enum ModelContainerSetup {
 
             if categories.isEmpty {
                 populateInitialData(in: container)
+            }
+
+            // Check if we need to create default settings
+            let settingsDescriptor = FetchDescriptor<SettingsModel>()
+            let settings = try container.mainContext.fetch(settingsDescriptor)
+
+            if settings.isEmpty {
+                // Create default settings
+                let defaultSettings = SettingsModel()
+                container.mainContext.insert(defaultSettings)
+                try container.mainContext.save()
             }
 
             return container
@@ -71,6 +83,7 @@ struct PreviewContainer {
             PolmodorTask.self,
             PolmodorSubTask.self,
             TaskCategory.self,
+            SettingsModel.self,
         ])
 
         let configuration = ModelConfiguration(
@@ -92,6 +105,10 @@ struct PreviewContainer {
             for task in PolmodorTask.mockTasks {
                 container.mainContext.insert(task)
             }
+
+            // Add default settings for preview
+            let defaultSettings = SettingsModel()
+            container.mainContext.insert(defaultSettings)
 
             return container
         } catch {

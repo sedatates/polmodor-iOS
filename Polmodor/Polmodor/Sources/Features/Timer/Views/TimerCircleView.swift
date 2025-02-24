@@ -48,7 +48,7 @@ struct TimerCircleViewLEgacy: View {
     private func TimerMarkers(radius: CGFloat, totalDuration: Int) -> some View {
         let markerCount = totalDuration + 1
         return ZStack {
-            ForEach(0..<markerCount) { index in
+            ForEach(Array(0..<markerCount), id: \.self) { index in
                 let angle = Double(index) / Double(markerCount - 1) * 2 * .pi - .pi / 2
                 let markerRadius = radius - 30
                 let x = cos(angle) * markerRadius
@@ -99,11 +99,7 @@ struct TimerCircleViewLEgacy: View {
 
     private func ControlButtons() -> some View {
         HStack(spacing: 24) {
-            
 
-         
-
-           
         }
     }
 
@@ -126,15 +122,14 @@ struct TimerCircleViewLEgacy: View {
 
                         // Timer
                         TimerDisplay().offset(x: -circleRadius / 2, y: -circleRadius / 2)
-                        
-                        
+
                     }
                     .frame(height: circleRadius * 2)
                     .padding(.top, 40)
 
                     VStack(spacing: 32) {
                         ControlButtons()
-                        
+
                     }
                     .padding(.bottom, 40)
                 }
@@ -143,6 +138,3 @@ struct TimerCircleViewLEgacy: View {
         .ignoresSafeArea()
     }
 }
-
-
-

@@ -9,7 +9,7 @@ import SwiftUI
 extension Color {
     static let timerBackground = Color("TimerBackground")
     static let taskBackground = Color("TaskBackground")
-    static let accent = Color.accentColor
+    
 
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
