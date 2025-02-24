@@ -19,7 +19,7 @@ final class TaskListViewModel: ObservableObject {
         if !searchText.isEmpty {
             filtered = filtered.filter { task in
                 task.title.localizedCaseInsensitiveContains(searchText)
-                || task.description.localizedCaseInsensitiveContains(searchText)
+                || task.taskDescription.localizedCaseInsensitiveContains(searchText)
                 || task.subTasks.contains { subtask in
                     subtask.title.localizedCaseInsensitiveContains(searchText)
                 }

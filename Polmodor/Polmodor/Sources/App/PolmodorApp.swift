@@ -1,15 +1,15 @@
+import SwiftData
 import SwiftUI
 
 @main
 struct PolmodorApp: App {
     @StateObject private var timerViewModel = TimerViewModel()
-    @StateObject private var taskViewModel = TaskViewModel()
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(timerViewModel)
-                .environmentObject(taskViewModel)
+                .modelContainer(ModelContainerSetup.setupModelContainer())
         }
     }
 }

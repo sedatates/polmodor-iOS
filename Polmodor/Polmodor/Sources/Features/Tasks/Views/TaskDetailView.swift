@@ -1,156 +1,132 @@
+import SwiftData
 import SwiftUI
 
 struct TaskDetailView: View {
-    @EnvironmentObject var taskViewModel: TaskViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var task: PolmodorTask
-    @State private var isEditing = false
-    
-    init(task: PolmodorTask) {
-        _task = State(initialValue: task)
-    }
-    
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var task: PolmodorTask
+    @Query(sort: \TaskCategory.name) private var categories: [TaskCategory]
+
     var body: some View {
         List {
-            
-            HStack {
-                Image(systemName: task.iconName)
-                    .foregroundColor(task.categoryColor)
-                Text(task.title)
-                    .font(.headline)
-            }
-            
-            if !task.description.isEmpty {
-                Text(task.description)
-                    .foregroundColor(.secondary)
-            }
-            
-            HStack {
-                Label("Category", systemImage: task.category.iconName)
-                Spacer()
-                Text(task.category.name)
-                    .foregroundColor(task.categoryColor)
-            }
-            
-            HStack {
-                Label("Priority", systemImage: task.iconName)
-                Spacer()
-                Text(task.priority.rawValue.capitalized)
-                    .foregroundColor(task.priority.color)
-            }
-            
-            if !task.subTasks.isEmpty {
-                HStack {
-                    Label("Progress", systemImage: "chart.pie.fill")
-                    Spacer()
-                    Text("\(Int(task.progress * 100))%")
-                }
-            }
-            
-            
-            if !task.subTasks.isEmpty {
-                Section(header: Text("Subtasks")) {
-                    ForEach(task.subTasks) { subtask in
-                        HStack {
-                            Button(action: { taskViewModel.toggleSubtaskCompletion(subtask) }) {
-                                Image(
-                                    systemName: subtask.completed
-                                    ? "checkmark.circle.fill" : "circle"
-                                )
-                                .foregroundColor(subtask.completed ? .green : .gray)
-                            }
-                            
-                            VStack(alignment: .leading) {
-                                Text(subtask.title)
-                                    .strikethrough(subtask.completed)
-                                Text(
-                                    "\(subtask.pomodoro.completed)/\(subtask.pomodoro.total) Pomodoros"
-                                )
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            }
-                        }
+            Section("Task Details") {
+                TextField("Title", text: $task.title)
+                TextField("Description", text: $task.taskDescription, axis: .vertical)
+                    .lineLimit(3...6)
+
+                Picker("Category", selection: $task.category) {
+                    ForEach(categories) { category in
+                        Text(category.name)
+                            .tag(TaskCategory?.some(category))
                     }
                 }
-            }
-            
-            Section(header: Text("Time Management")) {
-                HStack {
-                    Label("Time Spent", systemImage: "clock")
-                    Spacer()
-                    Text(formatTime(task.timeSpent))
-                }
-                
-                HStack {
-                    Label("Time Remaining", systemImage: "timer")
-                    Spacer()
-                    Text(formatTime(task.timeRemaining))
-                }
-                
-                if let completedAt = task.completedAt {
-                    HStack {
-                        Label("Completed", systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.green)
-                        Spacer()
-                        Text(formatDate(completedAt))
+
+                Picker("Priority", selection: $task.priority) {
+                    ForEach(TaskPriority.allCases, id: \.self) { priority in
+                        Label(priority.rawValue.capitalized, systemImage: priority.iconName)
+                            .tag(priority)
                     }
+                }
+
+                Toggle("Completed", isOn: $task.completed)
+            }
+
+            Section("Time") {
+                DatePicker("Due Date", selection: $task.dueDate)
+
+                HStack {
+                    Text("Time Spent")
+                    Spacer()
+                    Text(timeString(from: task.timeSpent))
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("Time Remaining")
+                    Spacer()
+                    Text(timeString(from: task.timeRemaining))
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack {
+                    Text("Completed Pomodoros")
+                    Spacer()
+                    Text("\(task.completedPomodoros)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Subtasks") {
+                ForEach(task.subTasks) { subtask in
+                    SubtaskRow(subtask: subtask)
+                }
+                .onDelete(perform: deleteSubtasks)
+
+                Button(action: addSubtask) {
+                    Label("Add Subtask", systemImage: "plus.circle")
                 }
             }
         }
         .navigationTitle("Task Details")
-        .navigationBarItems(
-            trailing: Button("Edit") {
-                isEditing = true
-            }
-        )
-        .sheet(isPresented: $isEditing) {
-            TaskFormView(task: task) { updatedTask in
-                taskViewModel.updateTask(updatedTask)
-                task = updatedTask
-                isEditing = false
-            }
-        }
+        .navigationBarTitleDisplayMode(.inline)
     }
-    
-    private func formatTime(_ seconds: Double) -> String {
+
+    private func timeString(from seconds: Double) -> String {
         let hours = Int(seconds) / 3600
         let minutes = Int(seconds) / 60 % 60
-        return String(format: "%dh %dm", hours, minutes)
+
+        if hours > 0 {
+            return String(format: "%dh %dm", hours, minutes)
+        } else {
+            return String(format: "%dm", minutes)
+        }
     }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+
+    private func deleteSubtasks(at offsets: IndexSet) {
+        for index in offsets {
+            let subtask = task.subTasks[index]
+            modelContext.delete(subtask)
+        }
+    }
+
+    private func addSubtask() {
+        let subtask = PolmodorSubTask(
+            title: "New Subtask",
+            pomodoro: .init(total: 1, completed: 0)
+        )
+        task.subTasks.append(subtask)
+    }
+}
+
+private struct SubtaskRow: View {
+    @Bindable var subtask: PolmodorSubTask
+
+    var body: some View {
+        HStack {
+            Toggle(isOn: $subtask.completed) {
+                VStack(alignment: .leading) {
+                    Text(subtask.title)
+
+                    Text("\(subtask.pomodoro.completed)/\(subtask.pomodoro.total) pomodoros")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }
 
 #Preview {
-    NavigationView {
-        TaskDetailView(
-            task: PolmodorTask(
-                title: "Sample Task",
-                description: "This is a sample task for preview",
-                iconName: "star.fill",
-                category: .work,
-                priority: .high,
-                timeSpent: 3600,
-                timeRemaining: 7200,
-                subTasks: [
-                    PolmodorSubTask(
-                        id: UUID(),
-                        title: "Subtask 1",
-                        completed: true,
-                        pomodoro: .init(total: 2, completed: 1)
-                    ),
-                    PolmodorSubTask(
-                        id: UUID(),
-                        title: "Subtask 2",
-                        completed: false,
-                        pomodoro: .init(total: 3, completed: 0)
-                    ),
-                ]
-            ))
+    do {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: PolmodorTask.self, configurations: config)
+        let task = PolmodorTask.mockTasks[0]
+        container.mainContext.insert(task)
+
+        return NavigationStack {
+            TaskDetailView(task: task)
+        }
+        .modelContainer(container)
+    } catch {
+        return Text("Failed to create preview: \(error.localizedDescription)")
     }
 }

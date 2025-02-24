@@ -4,6 +4,7 @@ import SwiftData
 import SwiftUI
 
 @Observable
+@MainActor
 final class TaskViewModel {
     private var modelContext: ModelContext
     private var tasksDescriptor: FetchDescriptor<PolmodorTask>
@@ -13,7 +14,7 @@ final class TaskViewModel {
 
     var tasks: [PolmodorTask] = []
     var categories: [TaskCategory] = []
-    var selectedFilter: PolmodorTask.TaskStatus?
+    var selectedFilter: TaskStatus?
     var searchText: String = ""
     var showAddTask: Bool = false
 
@@ -21,11 +22,11 @@ final class TaskViewModel {
         self.modelContext = modelContainer.mainContext
 
         self.tasksDescriptor = FetchDescriptor<PolmodorTask>(
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+            sortBy: [SortDescriptor(\PolmodorTask.createdAt, order: .reverse)]
         )
 
         self.categoriesDescriptor = FetchDescriptor<TaskCategory>(
-            sortBy: [SortDescriptor(\.name)]
+            sortBy: [SortDescriptor(\TaskCategory.name)]
         )
 
         loadInitialData()
@@ -49,7 +50,7 @@ final class TaskViewModel {
     }
 
     private func setupObservers() {
-        NotificationCenter.default.publisher(for: ModelContext.didSaveNotification)
+        NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)
             .sink { [weak self] _ in
                 self?.loadInitialData()
             }
@@ -57,60 +58,52 @@ final class TaskViewModel {
     }
 
     // MARK: - Task Management
-    func filteredTasks(searchText: String, category: TaskCategory) -> [PolmodorTask] {
-        var filtered = tasks
-
-        if !searchText.isEmpty {
-            filtered = filtered.filter { task in
-                task.title.localizedCaseInsensitiveContains(searchText)
-                    || task.description.localizedCaseInsensitiveContains(searchText)
-                    || task.subTasks.contains { subtask in
-                        subtask.title.localizedCaseInsensitiveContains(searchText)
-                    }
-            }
-        }
-
-        if category.name != "All" {
-            filtered = filtered.filter { $0.category.id == category.id }
-        }
-
-        return sortedTasks(filtered)
-    }
-
     func addTask(_ task: PolmodorTask) {
         modelContext.insert(task)
-        saveContext()
+        try? modelContext.save()
     }
 
     func updateTask(_ task: PolmodorTask) {
-        saveContext()
+        try? modelContext.save()
     }
 
     func deleteTask(_ task: PolmodorTask) {
         modelContext.delete(task)
-        saveContext()
+        try? modelContext.save()
+    }
+
+    func toggleTaskCompletion(_ task: PolmodorTask) {
+        task.completed.toggle()
+        if task.completed {
+            task.completedAt = Date()
+            task.status = .completed
+        } else {
+            task.completedAt = nil
+            task.status = task.timeSpent > 0 ? .inProgress : .todo
+        }
+        try? modelContext.save()
     }
 
     func incrementPomodoro(for taskId: UUID) {
         guard let task = tasks.first(where: { $0.id == taskId }) else { return }
         task.incrementPomodoro()
-        saveContext()
+        try? modelContext.save()
     }
 
     func toggleSubtaskCompletion(_ subtask: PolmodorSubTask) {
         subtask.completed.toggle()
-        saveContext()
+        try? modelContext.save()
     }
 
     // MARK: - Category Management
     func addCategory(_ category: TaskCategory) {
         modelContext.insert(category)
-        saveContext()
+        try? modelContext.save()
     }
 
     func deleteCategory(_ category: TaskCategory) {
         modelContext.delete(category)
-        saveContext()
+        try? modelContext.save()
     }
 
     // MARK: - Statistics
@@ -145,7 +138,7 @@ final class TaskViewModel {
     }
 
     // MARK: - Task Sorting
-    private func sortedTasks(_ tasks: [PolmodorTask]) -> [PolmodorTask] {
+    func sortedTasks(_ tasks: [PolmodorTask]) -> [PolmodorTask] {
         tasks.sorted { task1, task2 in
             if task1.status == task2.status {
                 if task1.status == .completed {
@@ -155,15 +148,6 @@ final class TaskViewModel {
                 }
             }
             return task1.status.rawValue < task2.status.rawValue
-        }
-    }
-
-    // MARK: - Context Management
-    private func saveContext() {
-        do {
-            try modelContext.save()
-        } catch {
-            print("Error saving context: \(error)")
         }
     }
 }

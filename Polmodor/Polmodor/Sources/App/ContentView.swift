@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 private struct IsTimerActiveLockKey: EnvironmentKey {
@@ -22,7 +23,6 @@ extension EnvironmentValues {
 
 struct ContentView: View {
     @EnvironmentObject var timerViewModel: TimerViewModel
-    @EnvironmentObject var taskViewModel: TaskViewModel
     @State private var selectedTab: Tab = .timer
     @Namespace private var namespace
     @AppStorage("forceLockEnabled") private var forceLockEnabled = false
@@ -42,7 +42,6 @@ struct ContentView: View {
 
                 NavigationStack {
                     TaskListView()
-                        .environmentObject(taskViewModel)
                 }
                 .tag(Tab.tasks)
 
@@ -174,7 +173,6 @@ extension ContentView {
 #Preview {
     ContentView()
         .environmentObject(TimerViewModel())
-        .environmentObject(TaskViewModel())
         .environment(\.forceLockEnabled, false)
         .environment(\.isTimerActiveLock, false)
 }
