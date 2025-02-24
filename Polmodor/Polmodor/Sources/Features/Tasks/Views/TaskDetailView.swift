@@ -28,7 +28,7 @@ struct TaskDetailView: View {
             HStack {
                 Label("Category", systemImage: task.category.iconName)
                 Spacer()
-                Text(task.category.rawValue.capitalized)
+                Text(task.category.name)
                     .foregroundColor(task.categoryColor)
             }
             

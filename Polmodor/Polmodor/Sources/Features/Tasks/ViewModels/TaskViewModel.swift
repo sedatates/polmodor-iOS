@@ -1,78 +1,62 @@
 import Combine
+import Foundation
+import SwiftData
 import SwiftUI
 
+@Observable
+final class TaskViewModel {
+    private var modelContext: ModelContext
+    private var tasksDescriptor: FetchDescriptor<PolmodorTask>
+    private var categoriesDescriptor: FetchDescriptor<TaskCategory>
 
-@MainActor
-class TaskViewModel: ObservableObject, TaskServiceProtocol {
-    @Published private(set) var tasks: [PolmodorTask] = []
-    @Published var selectedFilter: PolmodorTask.TaskStatus?
-    @Published var searchText = ""
-    @Published var showAddTask = false
+    @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
-    private let userDefaults = UserDefaults.standard
-    private let tasksKey = "savedTasks"
-    private var cancellables = Set<AnyCancellable>()
+    var tasks: [PolmodorTask] = []
+    var categories: [TaskCategory] = []
+    var selectedFilter: PolmodorTask.TaskStatus?
+    var searchText: String = ""
+    var showAddTask: Bool = false
 
-    init() {
-        loadTasks()
+    init(modelContainer: ModelContainer) {
+        self.modelContext = modelContainer.mainContext
+
+        self.tasksDescriptor = FetchDescriptor<PolmodorTask>(
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+
+        self.categoriesDescriptor = FetchDescriptor<TaskCategory>(
+            sortBy: [SortDescriptor(\.name)]
+        )
+
+        loadInitialData()
+        setupObservers()
     }
 
-    var tasksPublisher: Published<[PolmodorTask]>.Publisher {
-        $tasks
-    }
+    // MARK: - Data Loading
+    private func loadInitialData() {
+        do {
+            tasks = try modelContext.fetch(tasksDescriptor)
+            categories = try modelContext.fetch(categoriesDescriptor)
 
-    var filteredTasks: [PolmodorTask] {
-        var filtered = tasks
-        if let filter = selectedFilter {
-            filtered = filtered.filter { $0.status == filter }
+            if categories.isEmpty {
+                categories = TaskCategory.defaultCategories
+                categories.forEach { modelContext.insert($0) }
+                try modelContext.save()
+            }
+        } catch {
+            print("Error loading data: \(error)")
         }
-        if !searchText.isEmpty {
-            filtered = filtered.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
-        }
-        return filtered
     }
 
-    var todoTasks: [PolmodorTask] {
-        filteredTasks.filter { $0.status == .todo }
+    private func setupObservers() {
+        NotificationCenter.default.publisher(for: ModelContext.didSaveNotification)
+            .sink { [weak self] _ in
+                self?.loadInitialData()
+            }
+            .store(in: &cancellables)
     }
 
-    var inProgressTasks: [PolmodorTask] {
-        filteredTasks.filter { $0.status == .inProgress }
-    }
-
-    var completedTasks: [PolmodorTask] {
-        filteredTasks.filter { $0.status == .completed }
-    }
-
-    func addTask(_ task: PolmodorTask) {
-        tasks.append(task)
-        saveTasks()
-    }
-
-    func updateTask(_ task: PolmodorTask) {
-        guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
-        tasks[index] = task
-        saveTasks()
-    }
-
-    func deleteTask(_ task: PolmodorTask) {
-        tasks.removeAll { $0.id == task.id }
-        saveTasks()
-    }
-
-    func moveTask(from source: IndexSet, to destination: Int) {
-        tasks.move(fromOffsets: source, toOffset: destination)
-        saveTasks()
-    }
-
-    func incrementPomodoro(for taskId: UUID) {
-        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
-        var task = tasks[index]
-        task.incrementPomodoro()
-        tasks[index] = task
-        saveTasks()
-    }
-
+    // MARK: - Task Management
     func filteredTasks(searchText: String, category: TaskCategory) -> [PolmodorTask] {
         var filtered = tasks
 
@@ -86,56 +70,50 @@ class TaskViewModel: ObservableObject, TaskServiceProtocol {
             }
         }
 
-        if category != .all {
-            filtered = filtered.filter { $0.category == category }
+        if category.name != "All" {
+            filtered = filtered.filter { $0.category.id == category.id }
         }
 
-        return filtered
+        return sortedTasks(filtered)
+    }
+
+    func addTask(_ task: PolmodorTask) {
+        modelContext.insert(task)
+        saveContext()
+    }
+
+    func updateTask(_ task: PolmodorTask) {
+        saveContext()
+    }
+
+    func deleteTask(_ task: PolmodorTask) {
+        modelContext.delete(task)
+        saveContext()
+    }
+
+    func incrementPomodoro(for taskId: UUID) {
+        guard let task = tasks.first(where: { $0.id == taskId }) else { return }
+        task.incrementPomodoro()
+        saveContext()
     }
 
     func toggleSubtaskCompletion(_ subtask: PolmodorSubTask) {
-        guard
-            let taskIndex = tasks.firstIndex(where: { task in
-                task.subTasks.contains { $0.id == subtask.id }
-            })
-        else { return }
-
-        guard
-            let subtaskIndex = tasks[taskIndex].subTasks.firstIndex(where: { $0.id == subtask.id })
-        else { return }
-
-        tasks[taskIndex].subTasks[subtaskIndex].completed.toggle()
-        updateTaskProgress(taskIndex)
-        saveTasks()
+        subtask.completed.toggle()
+        saveContext()
     }
 
-    func updateTaskProgress(_ taskIndex: Int) {
-        let task = tasks[taskIndex]
-        let completedSubtasks = task.subTasks.filter { $0.completed }.count
-        let totalSubtasks = task.subTasks.count
-
-        tasks[taskIndex].timeSpent =
-            completedSubtasks > 0
-            ? Double(completedSubtasks) / Double(totalSubtasks) * task.timeRemaining : 0
+    // MARK: - Category Management
+    func addCategory(_ category: TaskCategory) {
+        modelContext.insert(category)
+        saveContext()
     }
 
-    func loadTasks() {
-        guard let data = userDefaults.data(forKey: tasksKey),
-            let savedTasks = try? JSONDecoder().decode([PolmodorTask].self, from: data)
-        else {
-            return
-        }
-        tasks = savedTasks
+    func deleteCategory(_ category: TaskCategory) {
+        modelContext.delete(category)
+        saveContext()
     }
 
-    func saveTasks() {
-        guard let data = try? JSONEncoder().encode(tasks) else { return }
-        userDefaults.set(data, forKey: tasksKey)
-    }
-}
-
-// MARK: - Task Statistics
-extension TaskViewModel {
+    // MARK: - Statistics
     var completedTasksCount: Int {
         tasks.filter { $0.status == .completed }.count
     }
@@ -152,12 +130,23 @@ extension TaskViewModel {
         guard totalTasksCount > 0 else { return 0 }
         return Double(completedTasksCount) / Double(totalTasksCount)
     }
-}
 
-// MARK: - Task Sorting
-extension TaskViewModel {
-    func sortedTasks(_ tasks: [PolmodorTask]) -> [PolmodorTask] {
-        return tasks.sorted { (task1: PolmodorTask, task2: PolmodorTask) -> Bool in
+    // MARK: - Task Filtering
+    var todoTasks: [PolmodorTask] {
+        tasks.filter { $0.status == .todo }
+    }
+
+    var inProgressTasks: [PolmodorTask] {
+        tasks.filter { $0.status == .inProgress }
+    }
+
+    var completedTasks: [PolmodorTask] {
+        tasks.filter { $0.status == .completed }
+    }
+
+    // MARK: - Task Sorting
+    private func sortedTasks(_ tasks: [PolmodorTask]) -> [PolmodorTask] {
+        tasks.sorted { task1, task2 in
             if task1.status == task2.status {
                 if task1.status == .completed {
                     return task1.completedAt ?? Date() > task2.completedAt ?? Date()
@@ -166,6 +155,15 @@ extension TaskViewModel {
                 }
             }
             return task1.status.rawValue < task2.status.rawValue
+        }
+    }
+
+    // MARK: - Context Management
+    private func saveContext() {
+        do {
+            try modelContext.save()
+        } catch {
+            print("Error saving context: \(error)")
         }
     }
 }

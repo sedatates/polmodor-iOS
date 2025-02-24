@@ -11,6 +11,7 @@ struct TaskFormView: View {
     @State private var showingSubtaskSheet = false
     @State private var newSubtaskTitle = ""
     @State private var selectedPomodoroCount = 1
+    @EnvironmentObject var taskViewModel: TaskViewModel
 
     private let task: PolmodorTask?
     private let onSave: (PolmodorTask) -> Void
@@ -32,124 +33,75 @@ struct TaskFormView: View {
     }
 
     var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Task Details")) {
-                    TextField("Title", text: $title)
-                        .textInputAutocapitalization(.words)
+        Form {
+            Section(header: Text("Task Details")) {
+                TextField("Title", text: $title)
+                    .textInputAutocapitalization(.words)
 
-                    TextEditor(text: $description)
-                        .frame(height: 100)
-                        .overlay(
-                            Group {
-                                if description.isEmpty {
-                                    Text("Description (optional)")
-                                        .foregroundColor(.gray)
-                                        .padding(.leading, 4)
-                                        .padding(.top, 8)
-                                }
-                            },
-                            alignment: .topLeading
-                        )
+                TextEditor(text: $description)
+                    .frame(height: 100)
 
-                    Picker("Category", selection: $category) {
-                        ForEach(TaskCategory.allCases.filter { $0 != .all }, id: \.self) {
-                            category in
-                            Label(
-                                category.rawValue.capitalized,
-                                systemImage: category.iconName
-                            )
+                Picker("Category", selection: $category) {
+                    ForEach(taskViewModel.categories) { category in
+                        Label(category.name, systemImage: category.iconName)
                             .foregroundColor(category.color)
                             .tag(category)
-                        }
                     }
+                }
 
-                    Picker("Priority", selection: $priority) {
-                        ForEach(TaskPriority.allCases, id: \.self) { priority in
-                            Label(
-                                priority.rawValue.capitalized,
-                                systemImage: priority.iconName
-                            )
+                Picker("Priority", selection: $priority) {
+                    ForEach(TaskPriority.allCases, id: \.self) { priority in
+                        Label(priority.rawValue.capitalized, systemImage: priority.iconName)
                             .foregroundColor(priority.color)
                             .tag(priority)
-                        }
                     }
-
-                    IconPicker(selectedIcon: $iconName)
                 }
 
-                Section(
-                    header: Text("Subtasks"),
-                    footer: Text(
-                        "Add subtasks to break down your task into smaller, manageable pieces")
-                ) {
-                    ForEach(subTasks) { subtask in
-                        HStack {
-                            Text(subtask.title)
-                            Spacer()
-                            Text("\(subtask.pomodoro.total) 🍅")
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .onDelete { indexSet in
-                        subTasks.remove(atOffsets: indexSet)
-                    }
+                IconPicker(selectedIcon: $iconName)
+            }
 
-                    Button(action: { showingSubtaskSheet = true }) {
-                        Label("Add Subtask", systemImage: "plus.circle.fill")
-                    }
+            Section(header: Text("Subtasks")) {
+                ForEach(subTasks) { subtask in
+                    SubtaskRow(subtask: subtask)
+                }
+                .onDelete { indexSet in
+                    subTasks.remove(atOffsets: indexSet)
+                }
+
+                Button(action: { showingSubtaskSheet = true }) {
+                    Label("Add Subtask", systemImage: "plus.circle.fill")
                 }
             }
-            .navigationTitle(task == nil ? "New Task" : "Edit Task")
-            .navigationBarItems(
-                leading: Button("Cancel") {
-                    dismiss()
-                },
-                trailing: Button("Save") {
-                    saveTask()
-                    dismiss()
-                }
-                .disabled(!isValid)
+        }
+        .navigationTitle(task == nil ? "New Task" : "Edit Task")
+        .navigationBarItems(
+            leading: Button("Cancel") {
+                dismiss()
+            },
+            trailing: Button("Save") {
+                saveTask()
+                dismiss()
+            }
+            .disabled(!isValid)
+        )
+        .sheet(isPresented: $showingSubtaskSheet) {
+            AddSubtaskSheet(
+                isPresented: $showingSubtaskSheet,
+                newSubtaskTitle: $newSubtaskTitle,
+                selectedPomodoroCount: $selectedPomodoroCount,
+                addSubtask: addSubtask
             )
-            .sheet(isPresented: $showingSubtaskSheet) {
-                NavigationView {
-                    Form {
-                        TextField("Subtask Title", text: $newSubtaskTitle)
-
-                        Stepper(
-                            "Pomodoros: \(selectedPomodoroCount)",
-                            value: $selectedPomodoroCount, in: 1...10
-                        )
-                    }
-                    .navigationTitle("Add Subtask")
-                    .navigationBarItems(
-                        leading: Button("Cancel") {
-                            showingSubtaskSheet = false
-                            newSubtaskTitle = ""
-                            selectedPomodoroCount = 1
-                        },
-                        trailing: Button("Add") {
-                            addSubtask()
-                            showingSubtaskSheet = false
-                            newSubtaskTitle = ""
-                            selectedPomodoroCount = 1
-                        }
-                        .disabled(newSubtaskTitle.isEmpty)
-                    )
-                }
-                .presentationDetents([.medium])
-            }
         }
     }
 
     private func addSubtask() {
         let newSubtask = PolmodorSubTask(
-            id: UUID(),
             title: newSubtaskTitle,
-            completed: false,
             pomodoro: .init(total: selectedPomodoroCount, completed: 0)
         )
         subTasks.append(newSubtask)
+        newSubtaskTitle = ""
+        selectedPomodoroCount = 1
     }
 
     private func saveTask() {
@@ -172,6 +124,19 @@ struct TaskFormView: View {
             completedPomodoros: task?.completedPomodoros ?? 0
         )
         onSave(updatedTask)
+    }
+}
+
+private struct SubtaskRow: View {
+    let subtask: PolmodorSubTask
+
+    var body: some View {
+        HStack {
+            Text(subtask.title)
+            Spacer()
+            Text("\(subtask.pomodoro.total) 🍅")
+                .foregroundColor(.gray)
+        }
     }
 }
 
@@ -202,5 +167,8 @@ private struct IconPicker: View {
 }
 
 #Preview {
-    TaskFormView { _ in }
+    NavigationView {
+        TaskFormView { _ in }
+            .environmentObject(TaskViewModel())
+    }
 }

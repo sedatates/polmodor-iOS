@@ -6,7 +6,7 @@ You are an expert iOS developer using Swift and SwiftUI. Follow these guidelines
   - Use Swift's latest features and protocol-oriented programming
   - Prefer value types (structs) over classes
   - Use MVVM architecture with SwiftUI
-  - Structure: Follow Apple's guidelines for project structure and .cursor/rules/Polmodor-App-Guide.md
+  - Structure: Follow Apple's guidelines for project structure 
   - Follow Apple's Human Interface Guidelines
 
   

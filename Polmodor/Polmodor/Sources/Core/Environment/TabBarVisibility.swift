@@ -1,17 +1,21 @@
 import SwiftUI
 
-public class TabBarVisibility {
-  public var setVisible: (Bool) -> Void = { _ in }
+final class TabBarVisibility: ObservableObject {
+  @Published var isVisible: Bool = true
 
-  public init() {}
+  func setVisible(_ visible: Bool) {
+    withAnimation(.easeInOut(duration: 0.3)) {
+      isVisible = visible
+    }
+  }
 }
 
-public struct TabBarVisibilityKey: EnvironmentKey {
-  public static let defaultValue = TabBarVisibility()
+private struct TabBarVisibilityKey: EnvironmentKey {
+  static let defaultValue = TabBarVisibility()
 }
 
 extension EnvironmentValues {
-    public var tabBarVisibility: TabBarVisibility {
+  var tabBarVisibility: TabBarVisibility {
     get { self[TabBarVisibilityKey.self] }
     set { self[TabBarVisibilityKey.self] = newValue }
   }

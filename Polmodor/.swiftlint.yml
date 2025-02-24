@@ -6,14 +6,10 @@ opt_in_rules: # some rules are only opt-in
   - empty_count
   # Find all the available rules by running:
   # swiftlint rules
-included: # paths to include during linting. `--path` is ignored if present.
-  - Polmodor/Sources
-excluded: # paths to ignore during linting. Takes precedence over `included`.
-  - Carthage
-  - Pods
-  - Source/ExcludedFolder
-  - Source/ExcludedFile.swift
-  - Source/*/ExcludedFile.swift # Exclude files with a wildcard
+# included: # paths to include during linting. `--path` is ignored if present.
+
+# excluded: # paths to ignore during linting. Takes precedence over `included`.
+
 analyzer_rules: # Rules run by `swiftlint analyze` (experimental)
   - explicit_self
 

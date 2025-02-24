@@ -9,6 +9,7 @@ protocol TaskServiceProtocol {
     var selectedFilter: PolmodorTask.TaskStatus? { get set }
     var searchText: String { get set }
     var showAddTask: Bool { get set }
+    var categories: [TaskCategory] { get set }
 
     // MARK: - Task Management
     func filteredTasks(searchText: String, category: TaskCategory) -> [PolmodorTask]
@@ -35,6 +36,10 @@ protocol TaskServiceProtocol {
 
     // MARK: - Task Sorting
     func sortedTasks(_ tasks: [PolmodorTask]) -> [PolmodorTask]
+
+    // MARK: - Category Management
+    func addCategory(_ category: TaskCategory)
+    func deleteCategory(_ category: TaskCategory)
 }
 
 class TaskService: TaskServiceProtocol {
@@ -60,6 +65,7 @@ class TaskService: TaskServiceProtocol {
     var selectedFilter: PolmodorTask.TaskStatus?
     var searchText: String = ""
     var showAddTask: Bool = true
+    var categories: [TaskCategory] = []
 
     func filteredTasks(searchText: String, category: TaskCategory) -> [PolmodorTask] {
         var filtered = tasks
@@ -201,5 +207,14 @@ class TaskService: TaskServiceProtocol {
             }
             return task1.status.rawValue < task2.status.rawValue
         }
+    }
+
+    // MARK: - Category Management
+    func addCategory(_ category: TaskCategory) {
+        categories.append(category)
+    }
+
+    func deleteCategory(_ category: TaskCategory) {
+        categories.removeAll { $0 == category }
     }
 }

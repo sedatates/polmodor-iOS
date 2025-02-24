@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct TimerCircleView: View {
+struct TimerCircleViewLEgacy: View {
     let progress: Double
     let timeRemaining: String
     let state: PomodoroState
@@ -99,24 +99,11 @@ struct TimerCircleView: View {
 
     private func ControlButtons() -> some View {
         HStack(spacing: 24) {
-            ControlButton(
-                icon: "arrow.counterclockwise",
-                color: progressColor,
-                action: onReset
-            )
+            
 
-            ControlButton(
-                icon: isRunning ? "pause.fill" : "play.fill",
-                color: progressColor,
-                action: isRunning ? onPause : onStart
-            )
-            .scaleEffect(1.2)
+         
 
-            ControlButton(
-                icon: "plus",
-                color: progressColor,
-                action: onAddTask
-            )
+           
         }
     }
 
@@ -158,47 +145,4 @@ struct TimerCircleView: View {
 }
 
 
-// MARK: - Control Button
-struct ControlButton: View {
-    let icon: String
-    let color: Color
-    let action: () -> Void
 
-    @State private var isPressed = false
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(color)
-                    .shadow(color: color.opacity(0.3), radius: 10, x: 0, y: 5)
-
-                Image(systemName: icon)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-            }
-        }
-        .frame(width: 60, height: 60)
-        .scaleEffect(isPressed ? 0.95 : 1)
-        .animation(.spring(response: 0.2, dampingFraction: 0.7), value: isPressed)
-        .pressEvents(onPress: { isPressed = true }, onRelease: { isPressed = false })
-    }
-}
-
-
-#if DEBUG
-    struct TimerCircleView_Previews: PreviewProvider {
-        static var previews: some View {
-            TimerCircleView(
-                progress: 0.7,
-                timeRemaining: "15:00",
-                state: .work,
-                isRunning: false,
-                onStart: {},
-                onPause: {},
-                onReset: {},
-                onAddTask: {}
-            )
-        }
-    }
-#endif

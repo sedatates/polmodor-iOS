@@ -9,83 +9,123 @@ struct SettingsView: View {
     @AppStorage("autoStartPomodoros") private var autoStartPomodoros = false
     @AppStorage("showNotifications") private var showNotifications = true
     @AppStorage("playSound") private var playSound = true
-    @AppStorage("forceLockEnabled") private var forceLockEnabled = false
     @AppStorage("zenModeEnabled") private var zenModeEnabled = false
     @AppStorage("zenModeDelay") private var zenModeDelay = 3.0  // seconds
 
     var body: some View {
-        NavigationView {
-            Form {
+        List {
+            Group {
                 Section("Timer Durations") {
                     Stepper(
-                        "Work: \(workDuration) minutes", value: $workDuration, in: 15...60, step: 5)
+                        "Work: \(workDuration) minutes",
+                        value: $workDuration,
+                        in: 15...60,
+                        step: 5
+                    )
+                    .padding(.vertical, 4)
+
                     Stepper(
-                        "Short Break: \(shortBreakDuration) minutes", value: $shortBreakDuration,
-                        in: 3...15)
+                        "Short Break: \(shortBreakDuration) minutes",
+                        value: $shortBreakDuration,
+                        in: 3...15
+                    )
+                    .padding(.vertical, 4)
+
                     Stepper(
-                        "Long Break: \(longBreakDuration) minutes", value: $longBreakDuration,
-                        in: 10...30, step: 5)
+                        "Long Break: \(longBreakDuration) minutes",
+                        value: $longBreakDuration,
+                        in: 10...30,
+                        step: 5
+                    )
+                    .padding(.vertical, 4)
+
                     Stepper(
                         "Pomodoros until Long Break: \(pomodorosUntilLongBreak)",
-                        value: $pomodorosUntilLongBreak, in: 2...6)
+                        value: $pomodorosUntilLongBreak,
+                        in: 2...6
+                    )
+                    .padding(.vertical, 4)
                 }
 
-                Section("Focus Features") {
-                    Toggle("Force Lock", isOn: $forceLockEnabled)
-                        .tint(.red)
+                Section {
+                    VStack(spacing: 16) {
+                        // Zen Mode Feature
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "moon.stars")
+                                    .font(.title2)
+                                    .foregroundColor(.purple)
+                                Text("Zen Mode")
+                                    .font(.headline)
+                                Spacer()
+                                Toggle("", isOn: $zenModeEnabled)
+                                    .tint(.purple)
+                            }
 
-                    if forceLockEnabled {
-                        Text(
-                            "When enabled, timer controls will be locked. You'll need to confirm to break your session."
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
+                            if zenModeEnabled {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(
+                                        "Controls will fade away after inactivity to help you stay focused."
+                                    )
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 30)
 
-                    Toggle("Zen Mode", isOn: $zenModeEnabled)
-                        .tint(.purple)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack {
+                                            Text("Fade Delay: \(Int(zenModeDelay))s")
+                                                .font(.subheadline.weight(.medium))
+                                            Spacer()
+                                        }
+                                        .padding(.leading, 30)
 
-                    if zenModeEnabled {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(
-                                "Controls will fade away after \(String(format: "%.0f", zenModeDelay)) seconds of inactivity."
-                            )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                            Slider(value: $zenModeDelay, in: 2...10, step: 1) {
-                                Text("Fade Delay")
-                            } minimumValueLabel: {
-                                Text("2s")
-                                    .font(.caption)
-                            } maximumValueLabel: {
-                                Text("10s")
-                                    .font(.caption)
+                                        Slider(value: $zenModeDelay, in: 5...10, step: 1)
+                                            .tint(.purple)
+                                            .padding(.leading, 30)
+                                    }
+                                }
                             }
                         }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color(.systemBackground))
+                                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        )
                     }
+                    .padding(.vertical, 8)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                } header: {
+                    Text("Focus Features")
                 }
 
                 Section("Automation") {
                     Toggle("Auto-start Breaks", isOn: $autoStartBreaks)
+                        .padding(.vertical, 2)
                     Toggle("Auto-start Pomodoros", isOn: $autoStartPomodoros)
+                        .padding(.vertical, 2)
                 }
 
                 Section("Notifications") {
                     Toggle("Show Notifications", isOn: $showNotifications)
+                        .padding(.vertical, 2)
                     Toggle("Play Sound", isOn: $playSound)
+                        .padding(.vertical, 2)
                 }
 
                 Section {
                     Link(destination: URL(string: "app-settings://")!) {
                         Label("Notification Settings", systemImage: "bell.badge")
                     }
+                    .padding(.vertical, 2)
 
                     Link(
                         destination: URL(string: "https://github.com/yourusername/polmodor/issues")!
                     ) {
                         Label("Report an Issue", systemImage: "exclamationmark.bubble")
                     }
+                    .padding(.vertical, 2)
                 }
 
                 Section {
@@ -93,7 +133,9 @@ struct SettingsView: View {
                         destination: AboutView(),
                         label: {
                             Label("About Polmodor", systemImage: "info.circle")
-                        })
+                        }
+                    )
+                    .padding(.vertical, 2)
                 }
 
                 Section {
@@ -106,14 +148,17 @@ struct SettingsView: View {
                         autoStartPomodoros = false
                         showNotifications = true
                         playSound = true
-                        forceLockEnabled = false
                         zenModeEnabled = false
                         zenModeDelay = 3.0
                     }
+                    .padding(.vertical, 2)
                 }
             }
-            .navigationTitle("Settings")
-            .navigationSplitViewStyle(BalancedNavigationSplitViewStyle())
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Settings")
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 100)
         }
     }
 }
@@ -123,11 +168,10 @@ struct AboutView: View {
         List {
             Section {
                 VStack(spacing: 16) {
-                    Image("AppIcon")
-                        .renderingMode(.original)
+                    Image("polmodorIcon")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 100, height: 100)
+                        .frame(height: 100)
 
                     Text("Polmodor")
                         .font(.title.bold())
@@ -143,8 +187,9 @@ struct AboutView: View {
 
             Section("About") {
                 Text(
-                    "Polmodor is a Pomodoro Timer app designed to help you stay focused and productive. It uses the Pomodoro Technique™, a time management method developed by Francesco Cirillo."
+                    "Polmodor is a Pomodoro Timer app designed to help you stay focused and productive. It's simple, elegant, and easy to use."
                 )
+                .padding(.vertical, 8)
             }
 
             Section {
@@ -154,6 +199,7 @@ struct AboutView: View {
                 ) {
                     Label("Privacy Policy", systemImage: "hand.raised")
                 }
+                .padding(.vertical, 2)
 
                 Link(
                     destination: URL(
@@ -161,20 +207,26 @@ struct AboutView: View {
                 ) {
                     Label("License", systemImage: "doc.text")
                 }
+                .padding(.vertical, 2)
             }
 
             Section {
-                Text("© \(Image(systemName: "copyright")) Sedat Ates")
+                Text("© \(Image(systemName: "heart.text.square")) Sedat Ates")
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 4)
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("About")
-        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 100)
+        }
     }
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         SettingsView()
     }
 }

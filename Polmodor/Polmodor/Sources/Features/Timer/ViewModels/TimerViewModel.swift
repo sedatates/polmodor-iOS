@@ -8,7 +8,7 @@ import UserNotifications
 #endif
 
 @MainActor
-class TimerViewModel: ObservableObject {
+final class TimerViewModel: ObservableObject {
     // MARK: - Published Properties
     @Published private(set) var timeRemaining: TimeInterval
     @Published private(set) var isRunning = false

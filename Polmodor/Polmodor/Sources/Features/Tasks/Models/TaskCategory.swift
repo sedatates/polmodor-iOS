@@ -1,34 +1,43 @@
+import SwiftData
 import SwiftUI
 
-enum TaskCategory: String, Codable, CaseIterable {
-    case all
-    case work
-    case study
-    case personal
+@Model
+final class TaskCategory: Identifiable {
+    var id: UUID
+    var name: String
+    var iconName: String
+    
+    // Color için bileşenlerini saklama
+    var colorHex: String
+    
 
+
+    init(id: UUID = UUID(), name: String, iconName: String, color: Color) {
+        self.id = id
+        self.name = name
+        self.iconName = iconName
+        self.colorHex = color.toHex() ?? "#0000FF" // varsayılan mavi
+    }
+    
+    // Color için computed property
     var color: Color {
-        switch self {
-        case .all:
-            return .gray
-        case .work:
-            return .blue
-        case .study:
-            return .green
-        case .personal:
-            return .orange
+        get {
+            Color(hex: colorHex) 
         }
+        set {
+            colorHex = newValue.toHex() ?? "#0000FF"
+        }
+    }
+    
+    static var all: TaskCategory {
+        TaskCategory(name: "All", iconName: "list.bullet", color: Color(hex: "#FFA500"))
     }
 
-    var iconName: String {
-        switch self {
-        case .all:
-            return "list.bullet"
-        case .work:
-            return "briefcase.fill"
-        case .study:
-            return "book.fill"
-        case .personal:
-            return "heart.fill"
-        }
+    static var defaultCategories: [TaskCategory] {
+        [
+            TaskCategory(name: "Work", iconName: "briefcase.fill", color: .blue),
+            TaskCategory(name: "Study", iconName: "book.fill", color: .green),
+            TaskCategory(name: "Personal", iconName: "heart.fill", color: .orange),
+        ]
     }
-} 
+}
