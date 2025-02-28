@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 
-
 // MARK: - Task Row View
 struct PolmodorTaskRow: View {
     let task: PolmodorTask
@@ -164,7 +163,6 @@ struct PolmodorTaskRow: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
                 
-                
                 // Divider that appears when expanded
                 if isExpanded {
                     Divider()
@@ -232,30 +230,33 @@ struct PolmodorTaskRow: View {
                                         HStack(spacing: 6) {
                                             Image(systemName: "plus.circle.fill")
                                                 .font(.system(size: 14))
-                                            Text("Yeni Subtask")
+                                            Text("Add a subtask")
                                                 .font(.subheadline.weight(.medium))
                                         }
                                         .foregroundStyle(accentColor)
+                                        .padding(.vertical, 8)
                                     }
-                                    
+                                    .buttonStyle(ScaleButtonStyle())
+                                    .contentShape(Rectangle())
                                     
                                     Spacer()
-                                    
-                                    NavigationLink {
-                                        TaskDetailView(task: task)
-                                    } label: {
-                                        HStack(spacing: 6) {
-                                            Image(systemName: "info.circle")
-                                                .font(.system(size: 14))
-                                            Text("Detayları Görüntüle")
+                                    ZStack {
+                                        CustomNavigationLink {
+                                            TaskDetailView(task: task)
+                                        } label: {
+                                            Text("View Details")
                                                 .font(.subheadline.weight(.medium))
+                                                .foregroundStyle(accentColor)
+                                                .padding(.vertical, 8)
                                         }
-                                        .foregroundStyle(.secondary)
+                                        
+                                        
+                                        
+                                        
                                     }
                                     
-                                }.padding(.horizontal, 16)
-                                    .padding(.vertical, 16)
-                                
+                                    
+                                }.padding(.horizontal, 16).padding(.bottom, 16)
                                 
                                 
                             }
@@ -274,12 +275,6 @@ struct PolmodorTaskRow: View {
                     .strokeBorder(Color.secondary.opacity(0.1), lineWidth: 1)
             )
             .contentShape(Rectangle())
-            .onTapGesture {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0.3)) {
-                    isExpanded.toggle()
-                    subtaskOpacity = isExpanded ? 1 : 0
-                }
-            }
         }
         .padding(.vertical, 6)
         .sheet(isPresented: $showAddSubtask) {
@@ -318,8 +313,6 @@ struct PolmodorTaskRow: View {
     }
 }
 
-
-
 struct TaskRowView_Previews: PreviewProvider {
     static var previews: some View {
         ScrollView {
@@ -328,5 +321,6 @@ struct TaskRowView_Previews: PreviewProvider {
                     .padding(.horizontal)
             }
             
-        }}
+        }
+    }
 }
