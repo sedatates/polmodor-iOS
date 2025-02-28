@@ -5,6 +5,7 @@ struct TaskDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var task: PolmodorTask
     @Query(sort: \TaskCategory.name) private var categories: [TaskCategory]
+    @State private var showAddSubtask = false
 
     var body: some View {
         List {
@@ -61,13 +62,20 @@ struct TaskDetailView: View {
                 }
                 .onDelete(perform: deleteSubtasks)
 
-                Button(action: addSubtask) {
+                Button(action: {
+                    showAddSubtask = true
+                }) {
                     Label("Add Subtask", systemImage: "plus.circle")
                 }
             }
         }
         .navigationTitle("Task Details")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAddSubtask) {
+            SubTaskAddView(task: task)
+                .presentationDetents([.medium])
+        }
+        .withFloatingTabBarPadding()
     }
 
     private func timeString(from seconds: Double) -> String {

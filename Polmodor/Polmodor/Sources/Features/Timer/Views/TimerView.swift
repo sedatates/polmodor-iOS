@@ -92,6 +92,7 @@ struct TimerView: View {
             .onChange(of: viewModel.activeSubtaskID) { oldValue, newValue in
                 loadActiveSubtask()
             }
+            .withFloatingTabBarPadding()
         }
         .alert("Unlock Timer Controls?", isPresented: $showUnlockAlert) {
             UnlockAlertButtons(

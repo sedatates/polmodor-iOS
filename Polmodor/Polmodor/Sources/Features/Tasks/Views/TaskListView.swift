@@ -1,7 +1,6 @@
 import SwiftData
 import SwiftUI
 
-
 // Mark: - TaskListView
 
 struct TaskListView: View {
@@ -81,6 +80,7 @@ struct TaskListView: View {
                 animateFilters = true
             }
         }
+        .withFloatingTabBarPadding()
     }
 
     // MARK: - Subviews

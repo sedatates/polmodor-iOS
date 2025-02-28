@@ -1,5 +1,5 @@
 //
-//  CustomeNavigationLink.swift
+//  CustomNavigationLink.swift
 //  Polmodor
 //
 //  Created by sedat ateş on 28.02.2025.

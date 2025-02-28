@@ -25,7 +25,7 @@ struct TaskProgressRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("İlerleme")
+                Text("Progress")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                 
