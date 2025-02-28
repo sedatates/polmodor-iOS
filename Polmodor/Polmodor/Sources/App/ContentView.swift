@@ -3,11 +3,33 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var timerViewModel: TimerViewModel
-    @State private var selectedTab: Tab = .timer
+    @AppStorage("selectedTab") private var selectedTab: Int = 0
+
+    private var currentTab: Tab {
+        switch selectedTab {
+        case 0: return .timer
+        case 1: return .tasks
+        case 2: return .settings
+        default: return .timer
+        }
+    }
+
+    private func updateSelectedTabStorage(_ tab: Tab) {
+        switch tab {
+        case .timer: selectedTab = 0
+        case .tasks: selectedTab = 1
+        case .settings: selectedTab = 2
+        }
+    }
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
+            TabView(
+                selection: Binding(
+                    get: { currentTab },
+                    set: { updateSelectedTabStorage($0) }
+                )
+            ) {
                 TimerView()
                     .environmentObject(timerViewModel)
                     .tag(Tab.timer)
@@ -24,9 +46,14 @@ struct ContentView: View {
             }
             .safeAreaInset(edge: .bottom) {
 
-                ModernTabBar(selectedTab: $selectedTab)
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
+                ModernTabBar(
+                    selectedTab: Binding(
+                        get: { currentTab },
+                        set: { updateSelectedTabStorage($0) }
+                    )
+                )
+                .padding(.horizontal)
+                .padding(.bottom, 8)
 
             }
         }
@@ -122,4 +149,5 @@ extension ContentView {
 #Preview {
     ContentView()
         .environmentObject(TimerViewModel())
+        .modelContainer(ModelContainerSetup.setupModelContainer())
 }

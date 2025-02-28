@@ -1,4 +1,5 @@
 import Combine
+import SwiftData
 import SwiftUI
 import UIKit
 
@@ -9,6 +10,7 @@ private final class Storage: ObservableObject {
 // MARK: - Main Timer View
 struct TimerView: View {
     @EnvironmentObject var viewModel: TimerViewModel
+    @Environment(\.modelContext) private var modelContext
 
     // MARK: - State
     @State private var showUnlockAlert = false
@@ -20,6 +22,8 @@ struct TimerView: View {
 
     @StateObject private var storage = Storage()
 
+    @State private var activeSubtask: PolmodorSubTask?
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -27,6 +31,39 @@ struct TimerView: View {
 
                 VStack(spacing: 30) {
                     Spacer()
+
+                    // Active subtask information
+                    if let subtask = activeSubtask {
+                        VStack(spacing: 8) {
+                            Text("Working on:")
+                                .font(.headline)
+                                .foregroundColor(.white.opacity(0.9))
+
+                            Text(subtask.title)
+                                .font(.title2.bold())
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+
+                            HStack(spacing: 8) {
+                                Image(systemName: "timer.circle.fill")
+                                    .foregroundColor(.white.opacity(0.9))
+
+                                Text(
+                                    "\(subtask.pomodoro.completed)/\(subtask.pomodoro.total) Pomodoros"
+                                )
+                                .foregroundColor(.white.opacity(0.9))
+                                .font(.subheadline.bold())
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 12)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.2))
+                            )
+                        }
+                        .padding(.bottom, 20)
+                    }
 
                     TimerCircleView(
                         progress: viewModel.progress,
@@ -52,6 +89,9 @@ struct TimerView: View {
             .onChange(of: viewModel.isRunning) { oldValue, newValue in
                 handleTimerStateChange(newValue)
             }
+            .onChange(of: viewModel.activeSubtaskID) { oldValue, newValue in
+                loadActiveSubtask()
+            }
         }
         .alert("Unlock Timer Controls?", isPresented: $showUnlockAlert) {
             UnlockAlertButtons(
@@ -62,7 +102,11 @@ struct TimerView: View {
         } message: {
             Text("Are you sure you want to interrupt your focus session?")
         }
-        .onAppear(perform: setupInitialState)
+        .onAppear {
+            setupInitialState()
+            viewModel.configure(with: modelContext)
+            loadActiveSubtask()
+        }
     }
 
     // MARK: - Private Methods
@@ -93,6 +137,27 @@ struct TimerView: View {
     private func handleTimerStateChange(_ isRunning: Bool) {
         if isRunning {
             handleLock()
+        }
+    }
+
+    // Load the active subtask when it changes
+    private func loadActiveSubtask() {
+        guard let subtaskID = viewModel.activeSubtaskID else {
+            activeSubtask = nil
+            return
+        }
+
+        do {
+            let descriptor = FetchDescriptor<PolmodorSubTask>(
+                predicate: #Predicate { subtask in
+                    subtask.id == subtaskID
+                }
+            )
+            let results = try modelContext.fetch(descriptor)
+            activeSubtask = results.first
+        } catch {
+            print("Error fetching active subtask: \(error)")
+            activeSubtask = nil
         }
     }
 }
