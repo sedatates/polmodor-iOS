@@ -15,36 +15,36 @@ struct SubTaskAddView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
-
+    
     private var backgroundColor: Color {
         colorScheme == .dark ? Color(white: 0.15) : Color.white
     }
-
+    
     private var accentColor: Color {
         task.category?.color ?? .blue
     }
-
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
                 // Task info card
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Ana Görev")
+                    Text("Task")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
-
+                    
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
                                 .fill(accentColor.opacity(0.15))
                                 .frame(width: 36, height: 36)
-
+                            
                             Image(systemName: task.iconName)
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundStyle(accentColor)
                                 .symbolRenderingMode(.hierarchical)
                         }
-
+                        
                         Text(task.title)
                             .font(.headline)
                             .lineLimit(2)
@@ -55,25 +55,26 @@ struct SubTaskAddView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal)
-
+                
                 // Subtask input
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Subtask Başlığı")
+                    Text("Subtask")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
-
-                    TextField("Subtask için başlık girin", text: $subtaskTitle)
-                        .font(.body.weight(.medium))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .background(Color.secondary.opacity(0.07))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
+                    TextField("Please enter a subtask",
+                              text: $subtaskTitle)
+                    .font(.body.weight(.medium))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(Color.secondary.opacity(0.07))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal)
-
+                
                 Spacer()
-
-                Button("Subtask Ekle") {
+                
+                Button("Add Subtask") {
                     addSubtask()
                 }
                 .disabled(subtaskTitle.isEmpty)
@@ -89,18 +90,18 @@ struct SubTaskAddView: View {
                 .padding(.bottom, 16)
             }
             .padding(.top, 16)
-            .navigationTitle("Yeni Subtask")
+            .navigationTitle("Add Subtask")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("İptal") {
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
             }
         }
     }
-
+    
     private func addSubtask() {
         // Only add if title is not empty
         if !subtaskTitle.isEmpty {
@@ -109,18 +110,18 @@ struct SubTaskAddView: View {
                 title: subtaskTitle,
                 pomodoro: .init(total: 1, completed: 0)
             )
-
+            
             // Add the subtask to the parent task
             task.subTasks.append(subtask)
-
+            
             // Make sure the model context is updated
             // This ensures changes are persisted and UI updates
             modelContext.insert(subtask)
-
+            
             // Clear the input field
             subtaskTitle = ""
         }
-
+        
         // Dismiss the sheet
         dismiss()
     }

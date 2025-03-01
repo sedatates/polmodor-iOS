@@ -201,13 +201,13 @@ struct TaskListView: View {
     }
 
     private var taskListView: some View {
-        List {
+        ScrollView {
             if filteredTasks.isEmpty {
                 emptyTasksView
             } else {
                 taskListContent
             }
-        }
+        }.padding(.horizontal, 16)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
     }

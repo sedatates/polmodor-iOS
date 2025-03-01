@@ -11,7 +11,6 @@ final class PolmodorSubTask {
   var pomodoroTotal: Int
   var pomodoroCompleted: Int
   
-  // İlişki
   @Relationship(inverse: \PolmodorTask.subTasks)
   var task: PolmodorTask?
 
