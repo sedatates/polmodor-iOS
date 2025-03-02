@@ -55,12 +55,21 @@ struct SubtaskRowView: View {
             Button(action: {
                 if !isCompleted {
                     if isActiveSubtask {
+                        // Clear the active subtask
                         timerViewModel.setActiveSubtask(nil as UUID?)
-                    } else {
-                        timerViewModel.setActiveSubtask(subtask.id)
-                        // Provide haptic feedback when setting active task
+
+                        // Provide haptic feedback when clearing task
                         #if os(iOS)
                             let generator = UIImpactFeedbackGenerator(style: .light)
+                            generator.impactOccurred()
+                        #endif
+                    } else {
+                        // Set this as the active subtask - this will automatically persist via TimerViewModel
+                        timerViewModel.setActiveSubtask(subtask.id)
+
+                        // Provide stronger haptic feedback when setting active task
+                        #if os(iOS)
+                            let generator = UIImpactFeedbackGenerator(style: .medium)
                             generator.impactOccurred()
                         #endif
                     }
@@ -83,6 +92,9 @@ struct SubtaskRowView: View {
             .buttonStyle(.plain)
             .opacity(isCompleted ? 0.4 : 1.0)
             .disabled(isCompleted)
+            // Highlight the active task button more prominently
+            .shadow(
+                color: isActiveSubtask ? Color.orange.opacity(0.4) : .clear, radius: 3, x: 0, y: 1)
         }
         .contentShape(Rectangle())
         .onTapGesture {

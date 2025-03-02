@@ -10,9 +10,9 @@ import SwiftUI
 struct CustomNavigationLink<D: View, L: View>: View {
   @ViewBuilder var destination: () -> D
   @ViewBuilder var label: () -> L
-  
+
   @State private var isActive = false
-  
+
   var body: some View {
     Button {
       withAnimation {
@@ -24,13 +24,8 @@ struct CustomNavigationLink<D: View, L: View>: View {
     .onAppear {
       isActive = false
     }
-    .overlay {
-      NavigationLink(isActive: $isActive) {
-        destination()
-      } label: {
-        EmptyView()
-      }
-      .opacity(0)
+    .navigationDestination(isPresented: $isActive) {
+      destination()
     }
   }
 }

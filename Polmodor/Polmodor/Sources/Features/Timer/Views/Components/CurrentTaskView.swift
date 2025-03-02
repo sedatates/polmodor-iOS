@@ -18,10 +18,6 @@ struct CurrentTaskView: View {
   @State private var activeSubtask: PolmodorSubTask?
   @State private var parentTask: PolmodorTask?
 
-  private var backgroundColor: Color {
-    colorScheme == .dark ? Color(white: 0.18) : Color(white: 0.97)
-  }
-
   var body: some View {
     Group {
       if let subtask = activeSubtask, let task = parentTask {
@@ -85,12 +81,27 @@ struct CurrentTaskView: View {
               timerViewModel.setActiveSubtask(nil)
             }
           }) {
-            Text("Clear active task")
-              .font(.caption.weight(.medium))
-              .foregroundStyle(.secondary)
-              .padding(.vertical, 8)
+            HStack(spacing: 6) {
+              Image(systemName: "xmark.circle.fill")
+                .font(.caption)
+                .imageScale(.small)
+
+              Text("Clear task")
+                .font(.caption.weight(.medium))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .background(
+              Capsule()
+                .fill(.ultraThinMaterial.opacity(0.7))
+            )
+            .overlay(
+              Capsule()
+                .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
+            )
           }
-          .padding(.top, 4)
+          .padding(.top, 12)
         }
         .padding(.horizontal)
         .transition(.move(edge: .top).combined(with: .opacity))
@@ -103,6 +114,13 @@ struct CurrentTaskView: View {
       loadActiveSubtask(id: newID)
     }
     .onAppear {
+      // Ensure we load the active subtask when the view appears
+      loadActiveSubtask(id: timerViewModel.activeSubtaskID)
+    }
+    // Add another observation to refresh when app becomes active
+    .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification))
+    { _ in
+      // Reload the active subtask when returning to foreground
       loadActiveSubtask(id: timerViewModel.activeSubtaskID)
     }
   }

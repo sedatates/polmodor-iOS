@@ -93,5 +93,4 @@ struct FilterChip: View {
     }
   }
   .padding()
-  .previewLayout(.sizeThatFits)
 }

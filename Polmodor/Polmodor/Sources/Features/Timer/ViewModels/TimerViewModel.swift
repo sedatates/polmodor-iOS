@@ -79,13 +79,21 @@ final class TimerViewModel: ObservableObject {
 
         // Configure SettingsManager with the same context
         Task {
-            await SettingsManager.shared.configure(with: modelContainer.mainContext)
+            SettingsManager.shared.configure(with: modelContainer.mainContext)
         }
     }
 
     // Configure with SwiftData ModelContext
     func configure(with modelContext: ModelContext) {
         self.modelContext = modelContext
+
+        // Configure TimerStateManager with the same context
+        Task {
+            TimerStateManager.shared.configure(with: modelContext)
+
+            // Restore saved timer state
+            restoreTimerState()
+        }
 
         // Observe settings changes
         observeSettingsChanges()
@@ -98,6 +106,46 @@ final class TimerViewModel: ObservableObject {
         // which reads from SettingsManager.shared
     }
 
+    // MARK: - Timer State Persistence
+
+    /// Saves the current timer state to persistent storage
+    func saveTimerState() {
+        TimerStateManager.shared.saveTimerState(
+            activeSubtaskID: activeSubtaskID,
+            timeRemaining: timeRemaining,
+            pomodoroState: state,
+            completedPomodoros: completedPomodoros,
+            isRunning: isRunning
+        )
+    }
+
+    /// Restores the timer state from persistent storage
+    private func restoreTimerState() {
+        let (
+            savedSubtaskID, savedTimeRemaining, savedState, savedCompletedPomodoros, savedIsRunning
+        ) =
+            TimerStateManager.shared.loadTimerState()
+
+        // Only restore if we have valid data
+        if savedState.duration > 0 {
+            self.state = savedState
+            self.timeRemaining = savedTimeRemaining > 0 ? savedTimeRemaining : savedState.duration
+            self.completedPomodoros = savedCompletedPomodoros
+
+            // Calculate progress based on time remaining
+            self.progress = 1 - (timeRemaining / state.duration)
+
+            // Set the active subtask if one was saved
+            self.activeSubtaskID = savedSubtaskID
+
+            // If it was running, we don't auto-resume, but we update the UI state
+            if savedIsRunning {
+                // Note: we don't call startTimer() here because we want the user to explicitly restart
+                // after relaunching the app
+            }
+        }
+    }
+
     // MARK: - Public Methods
     func toggleTimer() {
         if isRunning {
@@ -105,6 +153,9 @@ final class TimerViewModel: ObservableObject {
         } else {
             startTimer()
         }
+
+        // Save state after toggling
+        saveTimerState()
     }
 
     func startTimer() {
@@ -127,6 +178,9 @@ final class TimerViewModel: ObservableObject {
 
         // Update the task status when paused
         updateActiveTaskStatus(isRunning: false)
+
+        // Save timer state when paused
+        saveTimerState()
     }
 
     func resetTimer() {
@@ -135,10 +189,13 @@ final class TimerViewModel: ObservableObject {
         progress = 0
         state = .work
         completedPomodoros = 0
+
+        // Save state after reset
+        saveTimerState()
     }
 
     func skipToNext() {
-        let wasWorkState = state == .work
+        let _ = state == .work  // Using underscore to indicate intentional unused check
 
         switch state {
         case .work:
@@ -163,6 +220,9 @@ final class TimerViewModel: ObservableObject {
         if isRunning {
             startTimer()
         }
+
+        // Save state after skipping
+        saveTimerState()
     }
 
     // Set active subtask for the timer
@@ -178,6 +238,9 @@ final class TimerViewModel: ObservableObject {
         if isRunning && subtaskID != nil {
             updateActiveTaskStatus(isRunning: true)
         }
+
+        // Save state after changing active subtask
+        saveTimerState()
     }
 
     // MARK: - Private Methods
@@ -189,6 +252,11 @@ final class TimerViewModel: ObservableObject {
 
         timeRemaining -= 1
         progress = 1 - (timeRemaining / totalTime)
+
+        // Save state periodically (e.g. every 15 seconds)
+        if Int(timeRemaining) % 15 == 0 {
+            saveTimerState()
+        }
     }
 
     private func handleTimerCompletion() {

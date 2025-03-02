@@ -118,21 +118,25 @@ extension EnvironmentValues {
 extension View {
   /// Geçerli uygulama temasını uygular ve sistem tema değişimlerini izler
   func withAppTheme() -> some View {
-    self
-      .environment(\.colorScheme, ThemeManager.shared.colorScheme)
+    modifier(AppThemeModifier())
+  }
+}
+
+/// Tema değişikliklerini izleyen ve uygulayan modifier
+struct AppThemeModifier: ViewModifier {
+  @Environment(\.colorScheme) private var colorScheme
+  @ObservedObject private var themeManager = ThemeManager.shared
+
+  func body(content: Content) -> some View {
+    content
+      .environment(\.colorScheme, themeManager.colorScheme)
       .onAppear {
         // View ilk yüklendiğinde mevcut sistem temasını algıla
-        ThemeManager.shared.detectSystemTheme(colorScheme: self.colorScheme)
+        themeManager.detectSystemTheme(colorScheme: colorScheme)
       }
-      .onChange(of: self.colorScheme) { oldValue, newValue in
+      .onChange(of: colorScheme) { oldValue, newValue in
         // Sistem teması değiştiğinde ThemeManager'ı bilgilendir
-        ThemeManager.shared.detectSystemTheme(colorScheme: newValue)
+        themeManager.detectSystemTheme(colorScheme: newValue)
       }
-  }
-
-  /// Tema değişimlerini izleyen bir değişken
-  private var colorScheme: ColorScheme {
-    @Environment(\.colorScheme) var colorScheme
-    return colorScheme
   }
 }

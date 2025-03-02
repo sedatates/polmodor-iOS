@@ -203,9 +203,19 @@ struct TimerCircleView: View {
 
     var body: some View {
         ZStack {
+            // Background blur & material
             Circle()
-                .stroke(stateColor.opacity(0.2), lineWidth: 20)
+                .fill(.ultraThinMaterial.opacity(0.2))
+                .overlay(
+                    Circle().strokeBorder(stateColor.opacity(0.1), lineWidth: 1)
+                )
 
+            // Background track
+            Circle()
+                .stroke(stateColor.opacity(0.15), lineWidth: 20)
+                .shadow(color: stateColor.opacity(0.05), radius: 10, x: 0, y: 5)
+
+            // Progress track
             Circle()
                 .trim(from: 0, to: progress)
                 .stroke(
@@ -213,11 +223,14 @@ struct TimerCircleView: View {
                     style: StrokeStyle(lineWidth: 20, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
+                .shadow(color: stateColor.opacity(0.2), radius: 4, x: 0, y: 2)
 
+            // Timer text
             VStack(spacing: 8) {
                 Text(timeString)
                     .font(.custom("Bungee-Regular", size: 60))
                     .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
 
                 Text(stateTitle)
                     .font(.title2)
@@ -239,7 +252,7 @@ struct TimerControlsView: View {
     @Binding var showUnlockAlert: Bool
 
     var body: some View {
-        HStack(spacing: 24) {
+        HStack(spacing: 32) {
             ControlButton(
                 action: { viewModel.resetTimer() },
                 systemImage: "arrow.counterclockwise",
@@ -276,8 +289,13 @@ struct ControlButton: View {
                 .frame(width: 56, height: 56)
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white.opacity(0.2))
+                        .fill(.ultraThinMaterial.opacity(0.7))
                 )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
         }
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
@@ -296,10 +314,14 @@ struct PlayPauseButton: View {
                 .foregroundColor(viewModel.currentStateColor)
                 .frame(width: 72, height: 72)
                 .background(
-                    RoundedRectangle(cornerRadius: 20)
+                    Circle()
                         .fill(Color.white)
                 )
-                .shadow(radius: 10)
+                .overlay(
+                    Circle()
+                        .strokeBorder(viewModel.currentStateColor.opacity(0.2), lineWidth: 1)
+                )
+                .shadow(color: viewModel.currentStateColor.opacity(0.2), radius: 8, x: 0, y: 2)
         }
     }
 }
