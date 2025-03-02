@@ -10,6 +10,9 @@ struct PolmodorApp: App {
     // ThemeManager instance - environment üzerinden erişilebilir
     @StateObject private var themeManager: ThemeManager = ThemeManager.shared
 
+    // Track whether onboarding has been completed
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+
     // Initialize with proper setup
     init() {
         // Create TimerViewModel with model container for persistence
@@ -19,27 +22,31 @@ struct PolmodorApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .modelContainer(modelContainer)
-                .environmentObject(timerViewModel)
-                .environment(\.themeManager, ThemeManager.shared)
-                .preferredColorScheme(ThemeManager.shared.colorScheme)
-                .onChange(of: ThemeManager.shared.isDarkMode) { oldValue, newValue in
-                    // ThemeManager değiştiğinde, SwiftUI'nin kendi tema yönetimini güncelle
-                    let newColorScheme: ColorScheme = newValue ? .dark : .light
-                    updateColorScheme(newColorScheme)
-                }
-                .onDisappear {
-                    // Save timer state when app goes to background
-                    saveAppState()
-                }
-                .onReceive(
-                    NotificationCenter.default.publisher(
-                        for: UIApplication.willResignActiveNotification)
-                ) { _ in
-                    // Save timer state when app goes to background
-                    saveAppState()
-                }
+            if hasCompletedOnboarding {
+                ContentView()
+                    .modelContainer(modelContainer)
+                    .environmentObject(timerViewModel)
+                    .environment(\.themeManager, ThemeManager.shared)
+                    .preferredColorScheme(ThemeManager.shared.colorScheme)
+                    .onChange(of: ThemeManager.shared.isDarkMode) { oldValue, newValue in
+                        // ThemeManager değiştiğinde, SwiftUI'nin kendi tema yönetimini güncelle
+                        let newColorScheme: ColorScheme = newValue ? .dark : .light
+                        updateColorScheme(newColorScheme)
+                    }
+                    .onDisappear {
+                        // Save timer state when app goes to background
+                        saveAppState()
+                    }
+                    .onReceive(
+                        NotificationCenter.default.publisher(
+                            for: UIApplication.willResignActiveNotification)
+                    ) { _ in
+                        // Save timer state when app goes to background
+                        saveAppState()
+                    }
+            } else {
+                OnboardingView()
+            }
         }
     }
 
