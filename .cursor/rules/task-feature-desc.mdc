@@ -1,0 +1,308 @@
+---
+description: 
+globs: Polmodor/Polmodor/Sources/Features/Timer/*
+---
+# Polmodor App - Tasks Feature Documentation
+
+## Overview
+
+The Tasks feature in Polmodor app provides comprehensive task management capabilities integrated with the Pomodoro timer functionality. This document outlines the screens, data flow, and key components of the Tasks feature.
+
+## Data Models
+
+### Core Models
+
+#### `PolmodorTask`
+
+The primary model representing a task in the application.
+
+**Properties:**
+
+- `id`: Unique identifier (UUID)
+- `title`: Task name
+- `taskDescription`: Detailed description
+- `iconName`: SF Symbol name for task icon
+- `category`: Optional relationship to TaskCategory
+- `priorityRawValue`: String representation of TaskPriority enum
+- `timeSpent`: Time already spent on the task (in minutes)
+- `timeRemaining`: Estimated time remaining (in minutes)
+- `dueDate`: Task deadline
+- `completed`: Boolean indicating completion status
+- `isTimerRunning`: Whether the task is currently being timed
+- `subTasks`: Array of related PolmodorSubTask objects
+- `createdAt`: Creation timestamp
+- `completedAt`: Optional completion timestamp
+- `statusRawValue`: String representation of TaskStatus enum
+- `completedPomodoros`: Count of completed Pomodoro sessions
+
+#### `PolmodorSubTask`
+
+Represents a smaller component of a main task.
+
+**Properties:**
+
+- `id`: Unique identifier
+- `title`: Subtask name
+- `completed`: Completion status
+- `createdAt`: Creation timestamp
+- `completedAt`: Optional completion timestamp
+- Relationship to parent PolmodorTask
+
+#### `TaskCategory`
+
+Represents a grouping for tasks.
+
+**Properties:**
+
+- `id`: Unique identifier
+- `name`: Category name
+- `iconName`: SF Symbol name for category icon
+- `colorName`: Color identifier for the category
+
+#### `TaskPriority`
+
+Enum representing task importance levels:
+
+- `low`
+- `medium`
+- `high`
+
+#### `TaskStatus`
+
+Enum representing the current state of a task:
+
+- `todo`
+- `inProgress`
+- `done`
+
+## Screens and UI Components
+
+### 1. Task List Screen
+
+**Path:** `TaskListView`
+
+**Purpose:** Displays all tasks with filtering and sorting capabilities.
+
+**Key Features:**
+
+- Segmented view for different task statuses (Todo, In Progress, Done)
+- Task list with visual indicators for priority, category, and completion status
+- Pull-to-refresh functionality
+- Search capability
+- Filter options by category, priority, and date range
+- Sort options by due date, priority, or creation date
+- Swipe actions for quick task completion or deletion
+- Visual indicators for tasks with active timers
+
+**Data Flow:**
+
+- Fetches tasks from SwiftData using predicates based on current filters
+- Updates task status through direct model modifications
+- Refreshes when tasks are modified elsewhere in the app
+
+### 2. Task Detail Screen
+
+**Path:** `TaskDetailView`
+
+**Purpose:** Displays comprehensive information about a single task.
+
+**Key Features:**
+
+- Complete task information display
+- Progress tracking with visual indicators
+- Subtask management (add, edit, complete)
+- Time tracking history
+- Notes/description section
+- Due date with calendar visualization
+- Quick actions (start timer, mark complete, edit)
+- Related tasks or categories
+
+**Data Flow:**
+
+- Receives task object from list view
+- Updates task properties directly in the model
+- Manages subtask collection with add/remove capabilities
+- Syncs with timer feature when starting Pomodoro sessions
+
+### 3. Task Creation Screen
+
+**Path:** `TaskCreationView`
+
+**Purpose:** Allows users to create new tasks with all necessary details.
+
+**Key Features:**
+
+- Form-based input for all task properties
+- Category selection with option to create new categories
+- Priority selection with visual indicators
+- Due date picker with calendar interface
+- Estimated pomodoros/time required input
+- Subtask creation interface
+- Icon selection from SF Symbols library
+- Validation for required fields
+
+**Data Flow:**
+
+- Creates new task instance
+- Saves to SwiftData store
+- Optionally starts timer immediately after creation
+
+### 4. Task Edit Screen
+
+**Path:** `TaskEditView`
+
+**Purpose:** Allows modification of existing task properties.
+
+**Key Features:**
+
+- Pre-populated form with current task values
+- Same input options as creation screen
+- History of changes (optional)
+- Delete task option
+- Duplicate task option
+
+**Data Flow:**
+
+- Receives existing task object
+- Updates properties directly in the model
+- Handles relationship changes (category, subtasks)
+- Saves changes to SwiftData store
+
+### 5. Category Management Screen
+
+**Path:** `CategoryManagementView`
+
+**Purpose:** Allows creation and management of task categories.
+
+**Key Features:**
+
+- List of existing categories with task counts
+- Create new category interface
+- Edit/delete existing categories
+- Color and icon selection
+- Category reordering
+
+**Data Flow:**
+
+- Fetches categories from SwiftData
+- Creates/updates category models
+- Handles relationship updates when categories are deleted
+
+## Data Flow Architecture
+
+### SwiftData Integration
+
+The Tasks feature uses SwiftData for persistence with the following components:
+
+1. **Model Container Setup:**
+
+   - Defined in `ModelContainerSetup.swift`
+   - Configures schema and migration options
+   - Handles initial data seeding
+
+2. **Query Descriptors:**
+
+   - Predefined queries for common task filtering scenarios
+   - Sorting descriptors for different view options
+
+3. **Relationship Management:**
+   - Cascade deletion rules for subtasks
+   - Reference rules for categories
+
+### View Models
+
+#### `TaskListViewModel`
+
+Manages the task list display and filtering logic:
+
+- Handles SwiftData queries with filters and sorting
+- Provides computed properties for filtered views
+- Manages batch operations on tasks
+
+#### `TaskDetailViewModel`
+
+Manages single task operations:
+
+- Handles task updates and state changes
+- Manages subtask collection
+- Coordinates with TimerViewModel for Pomodoro sessions
+- Tracks completion and progress
+
+#### `TaskCreationViewModel`
+
+Manages the task creation process:
+
+- Validates input data
+- Creates model instances
+- Handles relationships with categories and subtasks
+
+### State Management
+
+1. **Local State:**
+
+   - View-specific state using `@State` and `@StateObject`
+   - Form input handling with validation
+
+2. **Shared State:**
+
+   - Task data through SwiftData's `@Query` and `@Environment(\.modelContext)`
+   - Timer state through `@EnvironmentObject`
+
+3. **User Preferences:**
+   - Default categories and view options stored in UserDefaults
+   - Filter and sort preferences persisted between sessions
+
+## Integration with Timer Feature
+
+The Tasks feature integrates with the Pomodoro Timer through:
+
+1. **Task Selection for Timer:**
+
+   - Ability to select a task when starting a timer
+   - Updates task's `timeSpent` and `completedPomodoros` when timer completes
+
+2. **Active Task Indication:**
+
+   - Visual indicators in task list for currently timed task
+   - Status updates when timer state changes
+
+3. **Automatic Tracking:**
+   - Timer sessions automatically update task progress
+   - Completion suggestions based on time spent
+
+## Accessibility Considerations
+
+- VoiceOver support with descriptive labels
+- Dynamic Type support for text scaling
+- Sufficient color contrast for categories and priorities
+- Haptic feedback for important actions
+
+## Future Enhancements
+
+1. **Advanced Filtering:**
+
+   - Smart lists based on due dates, priorities
+   - Custom saved filters
+
+2. **Statistics and Reporting:**
+
+   - Task completion trends
+   - Productivity analytics
+   - Time tracking reports
+
+3. **Collaboration:**
+
+   - Shared task lists
+   - Task assignment
+   - Progress notifications
+
+4. **Advanced Scheduling:**
+
+   - Recurring tasks
+   - Calendar integration
+   - Time blocking
+
+5. **AI Assistance:**
+   - Task prioritization suggestions
+   - Time estimation improvements
+   - Task breakdown assistance

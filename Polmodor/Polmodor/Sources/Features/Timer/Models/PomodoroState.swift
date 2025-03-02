@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 enum PomodoroState: String {
-    case work = "Work"
+    case work = "Focus Time"
     case shortBreak = "Short Break"
     case longBreak = "Long Break"
 
@@ -36,28 +36,34 @@ enum PomodoroState: String {
     }
 
     var title: String {
-        switch self {
-        case .work:
-            return "Focus Time"
-        case .shortBreak:
-            return "Short Break"
-        case .longBreak:
-            return "Long Break"
-        }
+        return self.rawValue
     }
 
     var description: String {
         self.rawValue
     }
 
-    public var duration: TimeInterval {
+    var duration: TimeInterval {
+        let settingsManager = SettingsManager.shared
+
         switch self {
         case .work:
-            return TimeInterval(UserDefaults.standard.integer(forKey: "workDuration")) * 60
+            return TimeInterval(settingsManager.workDurationMinutes) * 60
         case .shortBreak:
-            return TimeInterval(UserDefaults.standard.integer(forKey: "shortBreakDuration")) * 60
+            return TimeInterval(settingsManager.shortBreakDurationMinutes) * 60
         case .longBreak:
-            return TimeInterval(UserDefaults.standard.integer(forKey: "longBreakDuration")) * 60
+            return TimeInterval(settingsManager.longBreakDurationMinutes) * 60
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .work:
+            return .red
+        case .shortBreak:
+            return .green
+        case .longBreak:
+            return .blue
         }
     }
 }

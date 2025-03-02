@@ -7,10 +7,8 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		1265A5A56F8CB11A1C84B988 /* Pods-Polmodor.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Polmodor.debug.xcconfig"; path = "Target Support Files/Pods-Polmodor/Pods-Polmodor.debug.xcconfig"; sourceTree = "<group>"; };
 		59F84D202D6495F30099E619 /* Polmodor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polmodor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		76D52EC7A611697C74112283 /* Pods_Polmodor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Polmodor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D5505DE83CC7D3778F687EF6 /* Pods-Polmodor.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Polmodor.release.xcconfig"; path = "Target Support Files/Pods-Polmodor/Pods-Polmodor.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -50,7 +48,6 @@
 			children = (
 				59F84D222D6495F30099E619 /* Polmodor */,
 				59F84D212D6495F30099E619 /* Products */,
-				A192AA586995FE7A00A15AFD /* Pods */,
 				F242B28E895C074F3145478D /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -61,15 +58,6 @@
 				59F84D202D6495F30099E619 /* Polmodor.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		A192AA586995FE7A00A15AFD /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				1265A5A56F8CB11A1C84B988 /* Pods-Polmodor.debug.xcconfig */,
-				D5505DE83CC7D3778F687EF6 /* Pods-Polmodor.release.xcconfig */,
-			);
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		F242B28E895C074F3145478D /* Frameworks */ = {
@@ -87,7 +75,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 59F84D312D6495F40099E619 /* Build configuration list for PBXNativeTarget "Polmodor" */;
 			buildPhases = (
-				CB638797A754BE244D5580E1 /* [CP] Check Pods Manifest.lock */,
 				59F84D1C2D6495F30099E619 /* Sources */,
 				59F84D1D2D6495F30099E619 /* Frameworks */,
 				59F84D1E2D6495F30099E619 /* Resources */,
@@ -148,31 +135,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		CB638797A754BE244D5580E1 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-Polmodor-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		59F84D1C2D6495F30099E619 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -186,7 +148,6 @@
 /* Begin XCBuildConfiguration section */
 		59F84D322D6495F40099E619 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1265A5A56F8CB11A1C84B988 /* Pods-Polmodor.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -218,7 +179,6 @@
 		};
 		59F84D332D6495F40099E619 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D5505DE83CC7D3778F687EF6 /* Pods-Polmodor.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

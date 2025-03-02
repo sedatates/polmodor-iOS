@@ -1,0 +1,331 @@
+---
+description: 
+globs: Polmodor/Polmodor/Sources/Features/Settings/*
+---
+# Polmodor App - Settings Feature Documentation
+
+## Overview
+
+The Settings feature in Polmodor app provides a comprehensive configuration system that allows users to customize their Pomodoro experience. This document outlines the architecture, data flow, screens, and integration points of the Settings feature using SwiftData for persistence.
+
+## Data Models
+
+### Core Model
+
+#### `SettingsModel`
+
+The primary model representing application settings, persisted with SwiftData.
+
+**Properties:**
+
+- `isDarkModeEnabled`: Boolean controlling app appearance theme
+- `isNotificationEnabled`: Boolean controlling notification permissions
+- `isSoundEnabled`: Boolean controlling sound effects
+- `workDuration`: Integer representing Pomodoro work session duration (in minutes)
+- `shortBreakDuration`: Integer representing short break duration (in minutes)
+- `longBreakDuration`: Integer representing long break duration (in minutes)
+- `pomodorosUntilLongBreak`: Integer representing number of work sessions before a long break
+- `autoStartBreaks`: Boolean controlling automatic start of break sessions
+- `autoStartPomodoros`: Boolean controlling automatic start of work sessions
+
+## Data Flow Architecture
+
+### SwiftData Integration
+
+The Settings feature uses SwiftData for persistence with the following components:
+
+1. **Model Container Setup:**
+
+   - Defined in `ModelContainerSetup.swift`
+   - Configures schema and migration options for `SettingsModel`
+   - Handles initial data seeding with default values
+   - Ensures only one settings instance exists in the database
+
+2. **Model Context Access:**
+
+   - Settings are accessed through the SwiftData `modelContext` environment value
+   - Changes are automatically persisted when properties are modified
+   - No explicit save calls needed due to SwiftData's automatic persistence
+
+3. **Default Values:**
+   - Initial values are set in the `SettingsModel` initializer
+   - Provides sensible defaults (25-5-15 minute pattern, 4 pomodoros until long break)
+
+### State Management
+
+1. **Environment Access:**
+
+   - Views access settings through `@Environment(\.modelContext)` property wrapper
+   - Direct property access through `modelContext.settings` for reading values
+   - Direct property modification for writing values
+
+2. **Settings Propagation:**
+   - Changes to settings are automatically observed by SwiftData
+   - Views using the settings automatically update when values change
+   - No need for manual publisher/subscriber setup
+
+## Screens and UI Components
+
+### 1. Settings Screen
+
+**Path:** `SettingsView`
+
+**Purpose:** Provides a comprehensive interface for customizing all app settings.
+
+**Key Features:**
+
+- Organized into logical sections (Timer Durations, Automation, Notifications)
+- Steppers for numerical values with appropriate ranges and step values
+- Toggles for boolean settings
+- Links to system settings and external resources
+- Reset to defaults functionality
+- About section with app information
+
+**UI Components:**
+
+- List with inset grouped style for organized sections
+- Steppers with descriptive labels showing current values
+- Toggles with clear labels for boolean settings
+- Navigation links to sub-screens (About)
+- External links with SF Symbols for visual clarity
+- Reset button with confirmation dialog
+
+**Data Flow:**
+
+- Reads settings directly from the SwiftData model context
+- Updates settings by directly modifying model properties
+- Changes are automatically persisted by SwiftData
+- No explicit save or load operations required
+
+### 2. About Screen
+
+**Path:** `AboutView`
+
+**Purpose:** Displays information about the app, including version, description, and legal information.
+
+**Key Features:**
+
+- App icon and name display
+- Version information
+- App description
+- Links to privacy policy and license
+- Copyright information
+
+**UI Components:**
+
+- List with inset grouped style
+- Image view for app icon
+- Text views for information display
+- Link components for external resources
+- SF Symbols for visual enhancement
+
+## Integration with Timer Feature
+
+The Settings feature integrates with the Pomodoro Timer through:
+
+1. **Timer Duration Configuration:**
+
+   - `TimerViewModel` reads work, short break, and long break durations from `SettingsModel`
+   - Timer state transitions use the configured number of pomodoros until long break
+   - Changes to durations affect new timer sessions but not currently running sessions
+
+2. **Automation Control:**
+
+   - `TimerViewModel` observes `autoStartBreaks` and `autoStartPomodoros` settings
+   - Automatically starts the next appropriate session based on these settings
+   - Provides visual and auditory feedback based on automation settings
+
+3. **Notification Management:**
+   - `NotificationManager` respects `isNotificationEnabled` and `isSoundEnabled` settings
+   - Only shows notifications when enabled
+   - Only plays sounds when enabled
+
+## Implementation Details
+
+### SwiftData Setup
+
+```swift
+// In ModelContainerSetup.swift
+static func setupModelContainer() -> ModelContainer {
+    let schema = Schema([
+        SettingsModel.self,
+        // Other models...
+    ])
+
+    let modelConfiguration = ModelConfiguration(
+        schema: schema,
+        isStoredInMemoryOnly: false
+    )
+
+    do {
+        let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+
+        // Ensure settings exist
+        let context = container.mainContext
+        let settingsCount = try context.fetchCount(FetchDescriptor<SettingsModel>())
+
+        if settingsCount == 0 {
+            // Create default settings
+            let settings = SettingsModel()
+            context.insert(settings)
+            try context.save()
+        }
+
+        return container
+    } catch {
+        fatalError("Failed to create ModelContainer: \(error.localizedDescription)")
+    }
+}
+```
+
+### Settings Access Extension
+
+```swift
+// Extension to simplify settings access
+extension ModelContext {
+    var settings: SettingsModel {
+        get {
+            do {
+                let descriptor = FetchDescriptor<SettingsModel>()
+                let settings = try fetch(descriptor)
+                return settings.first ?? {
+                    let newSettings = SettingsModel()
+                    insert(newSettings)
+                    return newSettings
+                }()
+            } catch {
+                let newSettings = SettingsModel()
+                insert(newSettings)
+                return newSettings
+            }
+        }
+    }
+}
+```
+
+### Timer Integration
+
+```swift
+// In TimerViewModel
+@MainActor
+final class TimerViewModel: ObservableObject {
+    // Other properties...
+
+    private var modelContext: ModelContext
+
+    init(modelContext: ModelContext) {
+        self.modelContext = modelContext
+        self.timeRemaining = modelContext.settings.workDuration * 60
+        // Other initialization...
+    }
+
+    private var totalTime: TimeInterval {
+        switch state {
+        case .work:
+            return TimeInterval(modelContext.settings.workDuration * 60)
+        case .shortBreak:
+            return TimeInterval(modelContext.settings.shortBreakDuration * 60)
+        case .longBreak:
+            return TimeInterval(modelContext.settings.longBreakDuration * 60)
+        }
+    }
+
+    func handleTimerCompletion() {
+        // Handle timer completion based on settings
+        switch state {
+        case .work:
+            completedPomodoros += 1
+            if completedPomodoros % modelContext.settings.pomodorosUntilLongBreak == 0 {
+                state = .longBreak
+                if modelContext.settings.autoStartBreaks {
+                    startTimer()
+                }
+            } else {
+                state = .shortBreak
+                if modelContext.settings.autoStartBreaks {
+                    startTimer()
+                }
+            }
+        case .shortBreak, .longBreak:
+            state = .work
+            if modelContext.settings.autoStartPomodoros {
+                startTimer()
+            }
+        }
+
+        // Notification handling based on settings
+        if modelContext.settings.isNotificationEnabled {
+            // Show notification
+        }
+
+        if modelContext.settings.isSoundEnabled {
+            // Play sound
+        }
+    }
+}
+```
+
+## Accessibility Considerations
+
+- VoiceOver support with descriptive labels for all settings
+- Dynamic Type support for text scaling
+- Sufficient touch targets for controls (padding added to steppers and toggles)
+- Clear section organization for cognitive accessibility
+- Haptic feedback for important actions
+
+## Future Enhancements
+
+1. **Theme Customization:**
+
+   - Expanded theme options beyond light/dark mode
+   - Custom color schemes for timer states
+   - Font size adjustments
+
+2. **Advanced Timer Settings:**
+
+   - Custom work/break patterns
+   - Variable duration pomodoros
+   - Focus modes with different settings profiles
+
+3. **Data Export/Import:**
+
+   - Settings backup and restore
+   - Sharing settings between devices
+   - Preset configurations for different work styles
+
+4. **Integration with System Features:**
+
+   - Focus mode integration
+   - Calendar integration for scheduling
+   - Health app integration for focus tracking
+
+5. **User Profiles:**
+   - Multiple user profiles with different settings
+   - Quick switching between configurations
+   - Usage statistics per profile
+
+## Best Practices
+
+1. **SwiftData Usage:**
+
+   - Single source of truth for settings
+   - Automatic persistence without explicit save calls
+   - Proper error handling for data access
+
+2. **UI Design:**
+
+   - Consistent section organization
+   - Clear, descriptive labels
+   - Appropriate control types for each setting
+   - Visual feedback for changes
+
+3. **Performance:**
+
+   - Efficient settings access
+   - Minimal redraws when settings change
+   - Proper memory management
+
+4. **Testing:**
+   - Unit tests for settings persistence
+   - UI tests for settings interactions
+   - Edge case testing for min/max values

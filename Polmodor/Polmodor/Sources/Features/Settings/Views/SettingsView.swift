@@ -1,67 +1,197 @@
+import Combine
+import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("workDuration") private var workDuration = 25
-    @AppStorage("shortBreakDuration") private var shortBreakDuration = 5
-    @AppStorage("longBreakDuration") private var longBreakDuration = 15
-    @AppStorage("pomodorosUntilLongBreak") private var pomodorosUntilLongBreak = 4
-    @AppStorage("autoStartBreaks") private var autoStartBreaks = false
-    @AppStorage("autoStartPomodoros") private var autoStartPomodoros = false
-    @AppStorage("showNotifications") private var showNotifications = true
-    @AppStorage("playSound") private var playSound = true
-    
+    @Environment(\.modelContext) private var modelContext
+    @Query private var settingsModels: [SettingsModel]
+
+    // ThemeManager referansı
+    @Environment(\.themeManager) private var themeManager
+
+    // Aktif ayarlar
+    private var settings: SettingsModel {
+        // Eğer hiç ayar yoksa, yeni bir tane oluştur
+        if let firstSettings = settingsModels.first {
+            return firstSettings
+        } else {
+            let newSettings = SettingsModel()
+            modelContext.insert(newSettings)
+            return newSettings
+        }
+    }
+
     var body: some View {
-        NavigationView {
-            Form {
+        List {
+            Group {
                 Section("Timer Durations") {
-                    Stepper("Work: \(workDuration) minutes", value: $workDuration, in: 15...60, step: 5)
-                    Stepper("Short Break: \(shortBreakDuration) minutes", value: $shortBreakDuration, in: 3...15)
-                    Stepper("Long Break: \(longBreakDuration) minutes", value: $longBreakDuration, in: 10...30, step: 5)
-                    Stepper("Pomodoros until Long Break: \(pomodorosUntilLongBreak)", value: $pomodorosUntilLongBreak, in: 2...6)
+                    Stepper(
+                        "Work: \(settings.workDuration) minutes",
+                        value: Binding(
+                            get: { settings.workDuration },
+                            set: { newValue in
+                                settings.workDuration = newValue
+                                try? modelContext.save()
+                            }
+                        ),
+                        in: 15...60,
+                        step: 5
+                    )
+                    .padding(.vertical, 4)
+
+                    Stepper(
+                        "Short Break: \(settings.shortBreakDuration) minutes",
+                        value: Binding(
+                            get: { settings.shortBreakDuration },
+                            set: { newValue in
+                                settings.shortBreakDuration = newValue
+                                try? modelContext.save()
+                            }
+                        ),
+                        in: 5...15,
+                        step: 5
+                    )
+                    .padding(.vertical, 4)
+
+                    Stepper(
+                        "Long Break: \(settings.longBreakDuration) minutes",
+                        value: Binding(
+                            get: { settings.longBreakDuration },
+                            set: { newValue in
+                                settings.longBreakDuration = newValue
+                                try? modelContext.save()
+                            }
+                        ),
+                        in: 10...30,
+                        step: 5
+                    )
+                    .padding(.vertical, 4)
+
+                    Stepper(
+                        "Pomodoros Until Long Break: \(settings.pomodorosUntilLongBreak)",
+                        value: Binding(
+                            get: { settings.pomodorosUntilLongBreak },
+                            set: { newValue in
+                                settings.pomodorosUntilLongBreak = newValue
+                                try? modelContext.save()
+                            }
+                        ),
+                        in: 4...10,
+                        step: 1
+                    )
+                    .padding(.vertical, 4)
                 }
-                
+
                 Section("Automation") {
-                    Toggle("Auto-start Breaks", isOn: $autoStartBreaks)
-                    Toggle("Auto-start Pomodoros", isOn: $autoStartPomodoros)
+                    Toggle(
+                        "Auto-start Breaks",
+                        isOn: Binding(
+                            get: { settings.autoStartBreaks },
+                            set: { newValue in
+                                settings.autoStartBreaks = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
+
+                    Toggle(
+                        "Auto-start Pomodoros",
+                        isOn: Binding(
+                            get: { settings.autoStartPomodoros },
+                            set: { newValue in
+                                settings.autoStartPomodoros = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
                 }
-                
+
                 Section("Notifications") {
-                    Toggle("Show Notifications", isOn: $showNotifications)
-                    Toggle("Play Sound", isOn: $playSound)
+                    Toggle(
+                        "Show Notifications",
+                        isOn: Binding(
+                            get: { settings.isNotificationEnabled },
+                            set: { newValue in
+                                settings.isNotificationEnabled = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
+
+                    Toggle(
+                        "Play Sound",
+                        isOn: Binding(
+                            get: { settings.isSoundEnabled },
+                            set: { newValue in
+                                settings.isSoundEnabled = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
                 }
-                
+
+                Section("Appearance") {
+                    Toggle(
+                        "Dark Mode",
+                        isOn: Binding(
+                            get: { settings.isDarkModeEnabled },
+                            set: { newValue in
+                                settings.isDarkModeEnabled = newValue
+                                themeManager.setDarkMode(newValue)
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
+                }
+
                 Section {
-                    Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
+                    Link(destination: URL(string: "app-settings://")!) {
                         Label("Notification Settings", systemImage: "bell.badge")
                     }
-                    
-                    Link(destination: URL(string: "https://github.com/yourusername/polmodor/issues")!) {
+                    .padding(.vertical, 2)
+
+                    Link(
+                        destination: URL(string: "https://github.com/yourusername/polmodor/issues")!
+                    ) {
                         Label("Report an Issue", systemImage: "exclamationmark.bubble")
                     }
+                    .padding(.vertical, 2)
                 }
-                
+
                 Section {
-                    NavigationLink(destination: AboutView(), label: {
-                        Label("About Polmodor", systemImage: "info.circle")
-                    })
+                    NavigationLink(
+                        destination: AboutView(),
+                        label: {
+                            Label("About Polmodor", systemImage: "info.circle")
+                        }
+                    )
+                    .padding(.vertical, 2)
                 }
-                
+
                 Section {
                     Button("Reset to Defaults") {
-                        workDuration = 25
-                        shortBreakDuration = 5
-                        longBreakDuration = 15
-                        pomodorosUntilLongBreak = 4
-                        autoStartBreaks = false
-                        autoStartPomodoros = false
-                        showNotifications = true
-                        playSound = true
+                        settings.resetToDefaults()
+                        themeManager.setDarkMode(settings.isDarkModeEnabled)
+                        try? modelContext.save()
                     }
+                    .padding(.vertical, 2)
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("Settings")
-        .navigationSplitViewStyle(BalancedNavigationSplitViewStyle())
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 100)
+        }
+        .onAppear {
+            // Tema yöneticisini güncelle
+            themeManager.setDarkMode(settings.isDarkModeEnabled)
+        }
     }
 }
 
@@ -70,16 +200,14 @@ struct AboutView: View {
         List {
             Section {
                 VStack(spacing: 16) {
-                    Image(.polmodorIcon)
-                        .renderingMode(.original)
+                    Image("polmodorIcon")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 100, height: 100)
-                    
-                    
+                        .frame(height: 100)
+
                     Text("Polmodor")
                         .font(.title.bold())
-                    
+
                     Text("Version 1.0.0 (1)")
                         .foregroundStyle(.secondary)
                 }
@@ -88,35 +216,50 @@ struct AboutView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
-            
+
             Section("About") {
-                Text("Polmodor is a Pomodoro Timer app designed to help you stay focused and productive. It uses the Pomodoro Technique™, a time management method developed by Francesco Cirillo.")
+                Text(
+                    "Polmodor is a Pomodoro Timer app designed to help you stay focused and productive. It's simple, elegant, and easy to use."
+                )
+                .padding(.vertical, 8)
             }
-            
+
             Section {
-                Link(destination: URL(string: "https://github.com/yourusername/polmodor/blob/main/PRIVACY.md")!) {
+                Link(
+                    destination: URL(
+                        string: "https://github.com/yourusername/polmodor/blob/main/PRIVACY.md")!
+                ) {
                     Label("Privacy Policy", systemImage: "hand.raised")
                 }
-                
-                Link(destination: URL(string: "https://github.com/yourusername/polmodor/blob/main/LICENSE")!) {
+                .padding(.vertical, 2)
+
+                Link(
+                    destination: URL(
+                        string: "https://github.com/yourusername/polmodor/blob/main/LICENSE")!
+                ) {
                     Label("License", systemImage: "doc.text")
                 }
+                .padding(.vertical, 2)
             }
-            
+
             Section {
-                //Date Year
-                Text("© \(Image(systemName: "copyright")) Sedat Ates")
+                Text("© \(Image(systemName: "heart.text.square")) Sedat Ates")
                     .foregroundStyle(.secondary)
-                    
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 4)
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("About")
-        .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom) {
+            Color.clear.frame(height: 100)
+        }
     }
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         SettingsView()
+            .modelContainer(for: SettingsModel.self)
     }
 }

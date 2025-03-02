@@ -1,142 +1,282 @@
+import SwiftData
 import SwiftUI
 
+// Mark: - TaskListView
+
 struct TaskListView: View {
-    @StateObject private var viewModel = TaskViewModel()
-    @State private var showingAddTask = false
-    @State private var showingTaskDetail: PolmodorTask?
-    
-    var body: some View {
-        List {
-            TaskFilterView(selectedFilter: $viewModel.selectedFilter)
-            
-            ForEach(viewModel.filteredTasks) { task in
-                TaskRowView(task: task)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        showingTaskDetail = task
-                    }
-            }
-            .onDelete { indexSet in
-                for index in indexSet {
-                    viewModel.deleteTask(viewModel.filteredTasks[index])
-                }
-            }
-            .onMove { source, destination in
-                viewModel.moveTask(from: source, to: destination)
-            }
-        }
-        .navigationTitle("Tasks")
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    showingAddTask = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton()
-            }
-        }
-        .sheet(isPresented: $showingAddTask) {
-            NavigationView {
-                TaskFormView { task in
-                    viewModel.addTask(task)
-                }
-            }
-        }
-        .sheet(item: $showingTaskDetail) { task in
-            NavigationView {
-                TaskDetailView(task: task) { updatedTask in
-                    viewModel.updateTask(updatedTask)
-                }
-            }
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \PolmodorTask.createdAt, order: .reverse) private var tasks: [PolmodorTask]
+    @Query(sort: \TaskCategory.name) private var categories: [TaskCategory]
+
+    @State private var selectedFilter: TaskStatus?
+    @State private var selectedCategory: TaskCategory?
+    @State private var searchText = ""
+    @State private var showAddTask = false
+    @State private var animateFilters = false
+
+    private var filteredTasks: [PolmodorTask] {
+        tasks.filter { task in
+            let matchesSearch =
+                searchText.isEmpty || task.title.localizedCaseInsensitiveContains(searchText)
+                || task.taskDescription.localizedCaseInsensitiveContains(searchText)
+
+            let matchesFilter = selectedFilter == nil || task.status == selectedFilter
+
+            let matchesCategory =
+                selectedCategory == nil || task.category?.id == selectedCategory?.id
+
+            return matchesSearch && matchesFilter && matchesCategory
         }
     }
-}
 
-struct TaskFilterView: View {
-    @Binding var selectedFilter: PolmodorTask.TaskStatus?
-    
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack {
-                FilterChip(
-                    title: "All",
-                    isSelected: selectedFilter == nil,
-                    action: { selectedFilter = nil }
-                )
-                
-                ForEach(PolmodorTask.TaskStatus.allCases, id: \.self) { status in
-                    FilterChip(
-                        title: status.rawValue,
-                        isSelected: selectedFilter == status,
-                        action: { selectedFilter = status }
-                    )
-                }
-            }
-            .padding(.horizontal)
+    // Count tasks by status
+    private func taskCount(for status: TaskStatus?) -> Int {
+        if let status = status {
+            return tasks.filter { $0.status == status }.count
+        } else {
+            return tasks.count
         }
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
     }
-}
 
-struct FilterChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
+    // Count tasks by category
+    private func taskCount(for category: TaskCategory?) -> Int {
+        if let category = category {
+            return tasks.filter { $0.category?.id == category.id }.count
+        } else {
+            return tasks.count
+        }
+    }
+
     var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline)
+        VStack(spacing: 0) {
+            statusFilterView
+            categoryFilterView
+            Divider()
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? Color.accentColor : Color.secondary.opacity(0.1))
-                )
-                .foregroundColor(isSelected ? .white : .primary)
+            taskListView
+        }
+        .navigationTitle("Tasks")
+        .navigationBarTitleDisplayMode(.large)
+
+        .searchable(text: $searchText, prompt: "Search tasks")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: { showAddTask = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color(hex: "4CAF50"))
+                }
+            }
+        }
+        .sheet(isPresented: $showAddTask) {
+            NavigationStack {
+                AddTaskView()
+            }
+            .presentationDetents([.large])
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.1)) {
+                animateFilters = true
+            }
+        }
+        .withFloatingTabBarPadding()
+    }
+
+    // MARK: - Subviews
+
+    private var statusFilterView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                allTasksFilterChip
+                statusFilterChips
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.05))
+                .padding(.horizontal, 8)
+        )
+        .padding(.top, 8)
+    }
+
+    private var allTasksFilterChip: some View {
+        FilterChip(
+            title: "All",
+            iconName: "list.bullet",
+            color: .gray,
+            isSelected: selectedFilter == nil,
+            action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    selectedFilter = nil
+                }
+            },
+            count: taskCount(for: nil as TaskStatus?)
+        )
+        .offset(y: animateFilters ? 0 : 20)
+        .opacity(animateFilters ? 1 : 0)
+    }
+
+    private var statusFilterChips: some View {
+        ForEach(Array(TaskStatus.allCases.enumerated()), id: \.element) { index, status in
+            FilterChip(
+                title: status.displayName,
+                iconName: status.iconName,
+                color: status.color,
+                isSelected: selectedFilter == status,
+                action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedFilter = status
+                    }
+                },
+                count: taskCount(for: status)
+            )
+            .offset(y: animateFilters ? 0 : 20)
+            .opacity(animateFilters ? 1 : 0)
+            .animation(
+                .spring(response: 0.3, dampingFraction: 0.7).delay(
+                    Double(index) * 0.05), value: animateFilters)
+        }
+    }
+
+    private var categoryFilterView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                allCategoriesFilterChip
+                categoryFilterChips
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(0.05))
+                .padding(.horizontal, 8)
+        )
+        .padding(.vertical, 4)
+    }
+
+    private var allCategoriesFilterChip: some View {
+        FilterChip(
+            title: "All Categories",
+            iconName: "folder",
+            color: .orange,
+            isSelected: selectedCategory == nil,
+            action: {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    selectedCategory = nil
+                }
+            },
+            count: taskCount(for: nil as TaskCategory?)
+        )
+        .offset(y: animateFilters ? 0 : 20)
+        .opacity(animateFilters ? 1 : 0)
+        .animation(
+            .spring(response: 0.3, dampingFraction: 0.7).delay(0.1),
+            value: animateFilters)
+    }
+
+    private var categoryFilterChips: some View {
+        ForEach(Array(categories.enumerated()), id: \.element.id) { index, category in
+            FilterChip(
+                title: category.name,
+                iconName: category.iconName,
+                color: category.color,
+                isSelected: selectedCategory?.id == category.id,
+                action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedCategory = category
+                    }
+                },
+                count: taskCount(for: category)
+            )
+            .offset(y: animateFilters ? 0 : 20)
+            .opacity(animateFilters ? 1 : 0)
+            .animation(
+                .spring(response: 0.3, dampingFraction: 0.7).delay(
+                    0.1 + Double(index) * 0.05), value: animateFilters)
+        }
+    }
+
+    private var taskListView: some View {
+        ScrollView {
+            if filteredTasks.isEmpty {
+                emptyTasksView
+            } else {
+                taskListContent
+            }
+        }
+        .scrollIndicators(.hidden)
+        .padding(.horizontal, 16)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+    }
+
+    private var emptyTasksView: some View {
+        ContentUnavailableView {
+            Label("No Tasks", systemImage: "list.bullet.clipboard")
+        } description: {
+            Text("Add a new task or change your filters")
+        } actions: {
+            Button("Add Task") {
+                showAddTask = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color(hex: "4CAF50"))
+        }
+        .frame(maxWidth: .infinity)
+        .listRowBackground(Color.clear)
+        .padding(.top, 40)
+    }
+
+    private var taskListContent: some View {
+        ForEach(filteredTasks) { task in
+            PolmodorTaskRow(task: task)
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        withAnimation {
+                            modelContext.delete(task)
+                        }
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+
+                    if !task.completed {
+                        Button {
+                            withAnimation {
+                                task.completed = true
+                                task.completedAt = Date()
+                            }
+                        } label: {
+                            Label("Complete", systemImage: "checkmark")
+                        }
+                        .tint(.green)
+                    }
+                }
         }
     }
 }
 
-struct TaskRowView: View {
-    let task: PolmodorTask
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: task.status.systemImage)
-                    .foregroundColor(task.status == .completed ? .green : .secondary)
-                
-                Text(task.title)
-                    .font(.headline)
-                
-                Spacer()
-                
-                Text("\(task.completedPomodoros)/\(task.pomodoroCount)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            
-            if !task.description.isEmpty {
-                Text(task.description)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-            }
-            
-            ProgressView(value: task.progress)
-                .tint(task.status == .completed ? .green : .accentColor)
-        }
+// MARK: - Scale Button Style
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
-#Preview {
-    NavigationView {
-        TaskListView()
+struct TaskListView_Previews: PreviewProvider {
+    private let modelContainer2 = ModelContainerSetup.setupModelContainer()
+
+    static var previews: some View {
+        NavigationStack {
+            TaskListView()
+
+        }
+        .modelContainer(ModelContainerSetup.setupModelContainer())
     }
-} 
+}

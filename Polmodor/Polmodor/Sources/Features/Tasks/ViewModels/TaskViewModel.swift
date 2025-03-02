@@ -1,88 +1,112 @@
 import Combine
+import Foundation
+import SwiftData
 import SwiftUI
 
+@Observable
 @MainActor
-class TaskViewModel: ObservableObject {
-    @Published private(set) var tasks: [PolmodorTask] = []
-    @Published var selectedFilter: PolmodorTask.TaskStatus?
-    @Published var searchText = ""
+final class TaskViewModel {
+    private var modelContext: ModelContext
+    private var tasksDescriptor: FetchDescriptor<PolmodorTask>
+    private var categoriesDescriptor: FetchDescriptor<TaskCategory>
 
-    private let userDefaults = UserDefaults.standard
-    private let tasksKey = "savedTasks"
+    @ObservationIgnored private var cancellables = Set<AnyCancellable>()
 
-    init() {
-        loadTasks()
+    var tasks: [PolmodorTask] = []
+    var categories: [TaskCategory] = []
+    var selectedFilter: TaskStatus?
+    var searchText: String = ""
+    var showAddTask: Bool = false
+
+    init(modelContainer: ModelContainer) {
+        self.modelContext = modelContainer.mainContext
+
+        self.tasksDescriptor = FetchDescriptor<PolmodorTask>(
+            sortBy: [SortDescriptor(\PolmodorTask.createdAt, order: .reverse)]
+        )
+
+        self.categoriesDescriptor = FetchDescriptor<TaskCategory>(
+            sortBy: [SortDescriptor(\TaskCategory.name)]
+        )
+
+        loadInitialData()
+        setupObservers()
     }
 
-    var filteredTasks: [PolmodorTask] {
-        var filtered = tasks
-        if let filter = selectedFilter {
-            filtered = filtered.filter { $0.status == filter }
+    // MARK: - Data Loading
+    private func loadInitialData() {
+        do {
+            tasks = try modelContext.fetch(tasksDescriptor)
+            categories = try modelContext.fetch(categoriesDescriptor)
+
+            if categories.isEmpty {
+                categories = TaskCategory.defaultCategories
+                categories.forEach { modelContext.insert($0) }
+                try modelContext.save()
+            }
+        } catch {
+            print("Error loading data: \(error)")
         }
-        if !searchText.isEmpty {
-            filtered = filtered.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
-        }
-        return filtered
     }
 
-    var todoTasks: [PolmodorTask] {
-        filteredTasks.filter { $0.status == .todo }
+    private func setupObservers() {
+        NotificationCenter.default.publisher(for: .NSManagedObjectContextDidSave)
+            .sink { [weak self] _ in
+                self?.loadInitialData()
+            }
+            .store(in: &cancellables)
     }
 
-    var inProgressTasks: [PolmodorTask] {
-        filteredTasks.filter { $0.status == .inProgress }
-    }
-
-    var completedTasks: [PolmodorTask] {
-        filteredTasks.filter { $0.status == .completed }
-    }
-
+    // MARK: - Task Management
     func addTask(_ task: PolmodorTask) {
-        tasks.append(task)
-        saveTasks()
+        modelContext.insert(task)
+        try? modelContext.save()
     }
 
     func updateTask(_ task: PolmodorTask) {
-        guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
-        tasks[index] = task
-        saveTasks()
+        try? modelContext.save()
     }
 
     func deleteTask(_ task: PolmodorTask) {
-        tasks.removeAll { $0.id == task.id }
-        saveTasks()
+        modelContext.delete(task)
+        try? modelContext.save()
     }
 
-    func moveTask(from source: IndexSet, to destination: Int) {
-        tasks.move(fromOffsets: source, toOffset: destination)
-        saveTasks()
+    func toggleTaskCompletion(_ task: PolmodorTask) {
+        task.completed.toggle()
+        if task.completed {
+            task.completedAt = Date()
+            task.status = .completed
+        } else {
+            task.completedAt = nil
+            task.status = task.timeSpent > 0 ? .inProgress : .todo
+        }
+        try? modelContext.save()
     }
 
     func incrementPomodoro(for taskId: UUID) {
-        guard let index = tasks.firstIndex(where: { $0.id == taskId }) else { return }
-        var task = tasks[index]
+        guard let task = tasks.first(where: { $0.id == taskId }) else { return }
         task.incrementPomodoro()
-        tasks[index] = task
-        saveTasks()
+        try? modelContext.save()
     }
 
-    private func loadTasks() {
-        guard let data = userDefaults.data(forKey: tasksKey),
-            let savedTasks = try? JSONDecoder().decode([PolmodorTask].self, from: data)
-        else {
-            return
-        }
-        tasks = savedTasks
+    func toggleSubtaskCompletion(_ subtask: PolmodorSubTask) {
+        subtask.completed.toggle()
+        try? modelContext.save()
     }
 
-    private func saveTasks() {
-        guard let data = try? JSONEncoder().encode(tasks) else { return }
-        userDefaults.set(data, forKey: tasksKey)
+    // MARK: - Category Management
+    func addCategory(_ category: TaskCategory) {
+        modelContext.insert(category)
+        try? modelContext.save()
     }
-}
 
-// MARK: - Task Statistics
-extension TaskViewModel {
+    func deleteCategory(_ category: TaskCategory) {
+        modelContext.delete(category)
+        try? modelContext.save()
+    }
+
+    // MARK: - Statistics
     var completedTasksCount: Int {
         tasks.filter { $0.status == .completed }.count
     }
@@ -99,12 +123,23 @@ extension TaskViewModel {
         guard totalTasksCount > 0 else { return 0 }
         return Double(completedTasksCount) / Double(totalTasksCount)
     }
-}
 
-// MARK: - Task Sorting
-extension TaskViewModel {
+    // MARK: - Task Filtering
+    var todoTasks: [PolmodorTask] {
+        tasks.filter { $0.status == .todo }
+    }
+
+    var inProgressTasks: [PolmodorTask] {
+        tasks.filter { $0.status == .inProgress }
+    }
+
+    var completedTasks: [PolmodorTask] {
+        tasks.filter { $0.status == .completed }
+    }
+
+    // MARK: - Task Sorting
     func sortedTasks(_ tasks: [PolmodorTask]) -> [PolmodorTask] {
-        return tasks.sorted { (task1: PolmodorTask, task2: PolmodorTask) -> Bool in
+        tasks.sorted { task1, task2 in
             if task1.status == task2.status {
                 if task1.status == .completed {
                     return task1.completedAt ?? Date() > task2.completedAt ?? Date()
