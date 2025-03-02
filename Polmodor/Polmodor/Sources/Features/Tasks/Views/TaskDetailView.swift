@@ -6,6 +6,9 @@ struct TaskDetailView: View {
     @Bindable var task: PolmodorTask
     @Query(sort: \TaskCategory.name) private var categories: [TaskCategory]
     @State private var showAddSubtask = false
+    @State private var newSubtaskTitle = ""
+    @State private var showInlineSubtaskAdd = false
+    @EnvironmentObject private var timerViewModel: TimerViewModel
 
     var body: some View {
         List {
@@ -58,14 +61,56 @@ struct TaskDetailView: View {
 
             Section("Subtasks") {
                 ForEach(task.subTasks) { subtask in
-                    SubtaskRow(subtask: subtask)
+                    SubtaskRowView(subtask: subtask)
                 }
                 .onDelete(perform: deleteSubtasks)
+
+                if showInlineSubtaskAdd {
+                    HStack {
+                        TextField("New subtask title", text: $newSubtaskTitle)
+                            .submitLabel(.done)
+                            .onSubmit {
+                                if !newSubtaskTitle.isEmpty {
+                                    addInlineSubtask()
+                                    newSubtaskTitle = ""
+                                    showInlineSubtaskAdd = false
+                                }
+                            }
+
+                        Button(action: {
+                            if !newSubtaskTitle.isEmpty {
+                                addInlineSubtask()
+                                newSubtaskTitle = ""
+                            }
+                            showInlineSubtaskAdd = false
+                        }) {
+                            Text("Add")
+                                .font(.subheadline.bold())
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.mini)
+
+                        Button(action: {
+                            newSubtaskTitle = ""
+                            showInlineSubtaskAdd = false
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } else {
+                    Button(action: {
+                        showInlineSubtaskAdd = true
+                    }) {
+                        Label("Quick Add Subtask", systemImage: "plus")
+                    }
+                }
 
                 Button(action: {
                     showAddSubtask = true
                 }) {
-                    Label("Add Subtask", systemImage: "plus.circle")
+                    Label("Add Detailed Subtask", systemImage: "plus.circle")
                 }
             }
         }
@@ -96,32 +141,16 @@ struct TaskDetailView: View {
         }
     }
 
-    private func addSubtask() {
+    private func addInlineSubtask() {
         let subtask = PolmodorSubTask(
-            title: "New Subtask",
+            title: newSubtaskTitle,
             pomodoro: .init(total: 1, completed: 0)
         )
         task.subTasks.append(subtask)
+        try? modelContext.save()
     }
 }
 
-private struct SubtaskRow: View {
-    @Bindable var subtask: PolmodorSubTask
-
-    var body: some View {
-        HStack {
-            Toggle(isOn: $subtask.completed) {
-                VStack(alignment: .leading) {
-                    Text(subtask.title)
-
-                    Text("\(subtask.pomodoro.completed)/\(subtask.pomodoro.total) pomodoros")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-}
 
 #Preview {
     do {
@@ -132,6 +161,7 @@ private struct SubtaskRow: View {
 
         return NavigationStack {
             TaskDetailView(task: task)
+                .environmentObject(TimerViewModel())
         }
         .modelContainer(container)
     } catch {

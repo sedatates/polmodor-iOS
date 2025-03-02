@@ -203,6 +203,8 @@ final class TimerViewModel: ObservableObject {
 
         // If this was a work session that completed
         if state == .work {
+            completedPomodoros += 1
+
             // Increment pomodoro count for the active subtask
             if let subtaskID = activeSubtaskID {
                 incrementSubtaskPomodoro(subtaskID: subtaskID)
@@ -252,17 +254,32 @@ final class TimerViewModel: ObservableObject {
 
             if let subtask = results.first {
                 // Increment the completed pomodoro count
-                subtask.pomodoro = PomodoroCount(
-                    total: subtask.pomodoro.total,
-                    completed: subtask.pomodoro.completed + 1
-                )
+                let currentCompleted = subtask.pomodoro.completed
+                let currentTotal = subtask.pomodoro.total
 
-                // Also increment the parent task's completed pomodoros
-                if let parentTask = subtask.task {
-                    parentTask.completedPomodoros += 1
+                // Only increment if we haven't reached the total
+                if currentCompleted < currentTotal {
+                    subtask.pomodoro = PomodoroCount(
+                        total: currentTotal,
+                        completed: currentCompleted + 1
+                    )
+
+                    // Also increment the parent task's completed pomodoros
+                    if let parentTask = subtask.task {
+                        parentTask.completedPomodoros += 1
+
+                        // Update timeSpent
+                        parentTask.timeSpent += state.duration
+                    }
+
+                    try context.save()
+
+                    // Provide feedback for completed pomodoro
+                    #if os(iOS)
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                    #endif
                 }
-
-                try context.save()
             }
         } catch {
             print("Error updating subtask pomodoro count: \(error)")

@@ -6,18 +6,16 @@
 //
 
 import Foundation
+import SwiftData
 import SwiftUI
-
 
 struct PolmodorTaskExpandedView: View {
     let task: PolmodorTask
     let accentColor: Color
     @Binding var isExpanded: Bool
     @Binding var showAddSubtask: Bool
-    
-    
-    
-    
+    @EnvironmentObject private var timerViewModel: TimerViewModel
+
     var body: some View {
         VStack(spacing: 0) {
             if task.subTasks.isEmpty {
@@ -28,11 +26,11 @@ struct PolmodorTaskExpandedView: View {
                         .foregroundStyle(Color.secondary.opacity(0.3))
                         .symbolRenderingMode(.hierarchical)
                         .padding(.top, 16)
-                    
+
                     Text("No subtasks yet")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.secondary)
-                    
+
                     Button(action: {
                         showAddSubtask = true
                     }) {
@@ -52,7 +50,7 @@ struct PolmodorTaskExpandedView: View {
                     }
                     .buttonStyle(ScaleButtonStyle())
                     .padding(.bottom, 16)
-                    
+
                     CustomNavigationLink {
                         TaskDetailView(task: task)
                     } label: {
@@ -61,7 +59,7 @@ struct PolmodorTaskExpandedView: View {
                             .foregroundStyle(.gray)
                             .padding(.vertical, 8)
                     }
-                    
+
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
@@ -73,13 +71,23 @@ struct PolmodorTaskExpandedView: View {
                         .foregroundStyle(.secondary)
                         .padding(.top, 16)
                         .padding(.horizontal, 16)
-                    
+
                     ForEach(task.subTasks) { subtask in
                         SubtaskRowView(subtask: subtask)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(
+                                        timerViewModel.activeSubtaskID == subtask.id
+                                            ? Color.orange.opacity(0.1) : Color.clear)
+                            )
+                            .animation(
+                                .easeInOut(duration: 0.2), value: timerViewModel.activeSubtaskID
+                            )
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
-                    .padding(.horizontal, 16)
-                    
+
                     HStack {
                         Button(action: {
                             showAddSubtask = true
@@ -93,9 +101,9 @@ struct PolmodorTaskExpandedView: View {
                             .foregroundStyle(accentColor)
                             .padding(.vertical, 8)
                         }
-                        
+
                         Spacer()
-                        
+
                         ZStack {
                             CustomNavigationLink {
                                 TaskDetailView(task: task)
@@ -115,23 +123,25 @@ struct PolmodorTaskExpandedView: View {
     }
 }
 
-
-
-
+// MARK: - Previews
 struct PolmodorTaskExpandedView_Previews: PreviewProvider {
     static var previews: some View {
-        PolmodorTaskExpandedView(
-            task: PolmodorTask.mockTasks[2],
-            accentColor: .blue,
-            isExpanded: .constant(true),
-            showAddSubtask: .constant(false)
-        )
-        
-        PolmodorTaskExpandedView(
-            task: PolmodorTask.mockTasks[0],
-            accentColor: .blue,
-            isExpanded: .constant(true),
-            showAddSubtask: .constant(false)
-        )
+        VStack(spacing: 20) {
+            PolmodorTaskExpandedView(
+                task: PolmodorTask.mockTasks[2],
+                accentColor: .blue,
+                isExpanded: .constant(true),
+                showAddSubtask: .constant(false)
+            )
+
+            PolmodorTaskExpandedView(
+                task: PolmodorTask.mockTasks[0],
+                accentColor: .blue,
+                isExpanded: .constant(true),
+                showAddSubtask: .constant(false)
+            )
+        }
+        .padding()
+        .environmentObject(TimerViewModel())
     }
 }

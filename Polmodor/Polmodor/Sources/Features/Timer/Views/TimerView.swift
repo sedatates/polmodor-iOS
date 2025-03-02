@@ -1,7 +1,13 @@
 import Combine
+import Foundation
 import SwiftData
 import SwiftUI
-import UIKit
+// Import our custom components
+import UserNotifications
+
+#if os(iOS)
+    import UIKit
+#endif
 
 private final class Storage: ObservableObject {
     var cancellables = Set<AnyCancellable>()
@@ -23,6 +29,7 @@ struct TimerView: View {
     @StateObject private var storage = Storage()
 
     @State private var activeSubtask: PolmodorSubTask?
+    @State private var parentTask: PolmodorTask?
 
     var body: some View {
         GeometryReader { geometry in
@@ -30,40 +37,10 @@ struct TimerView: View {
                 BackgroundGradientView(stateColor: viewModel.currentStateColor)
 
                 VStack(spacing: 30) {
+                    // Active task display
+                    activeTaskView
+
                     Spacer()
-
-                    // Active subtask information
-                    if let subtask = activeSubtask {
-                        VStack(spacing: 8) {
-                            Text("Working on:")
-                                .font(.headline)
-                                .foregroundColor(.white.opacity(0.9))
-
-                            Text(subtask.title)
-                                .font(.title2.bold())
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-
-                            HStack(spacing: 8) {
-                                Image(systemName: "timer.circle.fill")
-                                    .foregroundColor(.white.opacity(0.9))
-
-                                Text(
-                                    "\(subtask.pomodoro.completed)/\(subtask.pomodoro.total) Pomodoros"
-                                )
-                                .foregroundColor(.white.opacity(0.9))
-                                .font(.subheadline.bold())
-                            }
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 12)
-                            .background(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.2))
-                            )
-                        }
-                        .padding(.bottom, 20)
-                    }
 
                     TimerCircleView(
                         progress: viewModel.progress,
@@ -110,6 +87,12 @@ struct TimerView: View {
         }
     }
 
+    // MARK: - Active Task View
+    private var activeTaskView: some View {
+        CurrentTaskView()
+            .padding(.top, 16)
+    }
+
     // MARK: - Private Methods
     private func setupInitialState() {
         isLocked = viewModel.isRunning
@@ -141,24 +124,54 @@ struct TimerView: View {
         }
     }
 
-    // Load the active subtask when it changes
+    // Load the subtask and its parent task from the model context
     private func loadActiveSubtask() {
         guard let subtaskID = viewModel.activeSubtaskID else {
-            activeSubtask = nil
+            withAnimation(.spring(response: 0.3)) {
+                activeSubtask = nil
+                parentTask = nil
+            }
             return
         }
 
         do {
-            let descriptor = FetchDescriptor<PolmodorSubTask>(
+            // Fetch the subtask
+            let subtaskDescriptor = FetchDescriptor<PolmodorSubTask>(
                 predicate: #Predicate { subtask in
                     subtask.id == subtaskID
                 }
             )
-            let results = try modelContext.fetch(descriptor)
-            activeSubtask = results.first
+
+            let results = try modelContext.fetch(subtaskDescriptor)
+            guard let subtask = results.first else {
+                withAnimation(.spring(response: 0.3)) {
+                    activeSubtask = nil
+                    parentTask = nil
+                }
+                return
+            }
+
+            // Find the parent task
+            let taskDescriptor = FetchDescriptor<PolmodorTask>(
+                predicate: #Predicate { task in
+                    task.subTasks.contains(where: { $0.id == subtaskID })
+                }
+            )
+
+            let taskResults = try modelContext.fetch(taskDescriptor)
+            let foundParentTask = taskResults.first
+
+            // Update state with animations
+            withAnimation(.spring(response: 0.3)) {
+                self.activeSubtask = subtask
+                self.parentTask = foundParentTask
+            }
         } catch {
             print("Error fetching active subtask: \(error)")
-            activeSubtask = nil
+            withAnimation(.spring(response: 0.3)) {
+                activeSubtask = nil
+                parentTask = nil
+            }
         }
     }
 }
@@ -203,7 +216,7 @@ struct TimerCircleView: View {
 
             VStack(spacing: 8) {
                 Text(timeString)
-                    .font(.system(size: 60, weight: .bold, design: .rounded))
+                    .font(.custom("Bungee-Regular", size: 60))
                     .foregroundColor(.white)
 
                 Text(stateTitle)
