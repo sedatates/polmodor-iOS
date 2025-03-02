@@ -20,8 +20,8 @@ final class TimerViewModel: ObservableObject {
 
     // MARK: - Private Properties
     private var timer: AnyCancellable?
-    @AppStorage("pomodorosUntilLongBreak") private var pomodorosUntilLongBreak = 4
     private var modelContext: ModelContext?
+    private var settingsCancellable: AnyCancellable?
 
     private var totalTime: TimeInterval {
         state.duration
@@ -72,9 +72,30 @@ final class TimerViewModel: ObservableObject {
         self.timeRemaining = PomodoroState.work.duration
     }
 
+    // Initialize with ModelContainer
+    convenience init(modelContainer: ModelContainer) {
+        self.init()
+        self.configure(with: modelContainer.mainContext)
+
+        // Configure SettingsManager with the same context
+        Task {
+            await SettingsManager.shared.configure(with: modelContainer.mainContext)
+        }
+    }
+
     // Configure with SwiftData ModelContext
     func configure(with modelContext: ModelContext) {
         self.modelContext = modelContext
+
+        // Observe settings changes
+        observeSettingsChanges()
+    }
+
+    // Observe settings changes to update timer behavior
+    private func observeSettingsChanges() {
+        // This would be implemented if SettingsManager exposed Combine publishers
+        // For now, we'll rely on the PomodoroState.duration computed property
+        // which reads from SettingsManager.shared
     }
 
     // MARK: - Public Methods
@@ -128,7 +149,7 @@ final class TimerViewModel: ObservableObject {
                 incrementSubtaskPomodoro(subtaskID: subtaskID)
             }
 
-            if completedPomodoros >= pomodorosUntilLongBreak {
+            if completedPomodoros >= SettingsManager.shared.pomodorosUntilLongBreakCount {
                 state = .longBreak
                 completedPomodoros = 0
             } else {
@@ -141,6 +162,21 @@ final class TimerViewModel: ObservableObject {
         progress = 0
         if isRunning {
             startTimer()
+        }
+    }
+
+    // Set active subtask for the timer
+    func setActiveSubtask(_ subtaskID: UUID?) {
+        // If we're changing subtasks while timer is running, update the previous task status
+        if isRunning && activeSubtaskID != nil && activeSubtaskID != subtaskID {
+            updateActiveTaskStatus(isRunning: false)
+        }
+
+        activeSubtaskID = subtaskID
+
+        // Update the new task status if timer is running
+        if isRunning && subtaskID != nil {
+            updateActiveTaskStatus(isRunning: true)
         }
     }
 
@@ -174,8 +210,10 @@ final class TimerViewModel: ObservableObject {
         }
 
         // Handle auto-transition based on settings
-        let shouldAutoStart = UserDefaults.standard.bool(
-            forKey: state == .work ? "autoStartBreaks" : "autoStartPomodoros")
+        let shouldAutoStart =
+            state == .work
+            ? SettingsManager.shared.shouldAutoStartBreaks
+            : SettingsManager.shared.shouldAutoStartPomodoros
 
         skipToNext()
 
@@ -184,7 +222,9 @@ final class TimerViewModel: ObservableObject {
         }
 
         // Schedule notification if app is in background
-        if UIApplication.shared.applicationState != .active {
+        if UIApplication.shared.applicationState != .active
+            && SettingsManager.shared.isNotificationsEnabled
+        {
             let title = state == .work ? "Time to focus!" : "Time for a break!"
             let message =
                 activeSubtaskTitle != nil

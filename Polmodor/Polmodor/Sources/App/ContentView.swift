@@ -1,10 +1,11 @@
+import Combine
 import SwiftData
 import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var timerViewModel: TimerViewModel
     @AppStorage("selectedTab") private var selectedTab: Int = 0
-
+    
     private var currentTab: Tab {
         switch selectedTab {
         case 0: return .timer
@@ -13,7 +14,7 @@ struct ContentView: View {
         default: return .timer
         }
     }
-
+    
     private func updateSelectedTabStorage(_ tab: Tab) {
         switch tab {
         case .timer: selectedTab = 0
@@ -21,9 +22,10 @@ struct ContentView: View {
         case .settings: selectedTab = 2
         }
     }
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
+            
             TabView(
                 selection: Binding(
                     get: { currentTab },
@@ -33,19 +35,23 @@ struct ContentView: View {
                 TimerView()
                     .environmentObject(timerViewModel)
                     .tag(Tab.timer)
-
+                
                 NavigationStack {
                     TaskListView()
                 }
+                .toolbarBackground(.hidden, for: .tabBar)
                 .tag(Tab.tasks)
-
+                
                 NavigationStack {
                     SettingsView()
                 }
+                .toolbarBackground(.hidden, for: .tabBar)
                 .tag(Tab.settings)
             }
+            .toolbarBackground(.hidden, for: .tabBar)
+            
+            
             .safeAreaInset(edge: .bottom) {
-
                 ModernTabBar(
                     selectedTab: Binding(
                         get: { currentTab },
@@ -54,16 +60,18 @@ struct ContentView: View {
                 )
                 .padding(.horizontal)
                 .padding(.bottom, 8)
-
             }
         }
+        .withAppTheme()
     }
 }
 
 struct ModernTabBar: View {
     @Binding var selectedTab: ContentView.Tab
     @Namespace private var animation
-
+    @Environment(\.colorScheme) private var colorScheme
+    private let themeManager = ThemeManager.shared
+    
     var body: some View {
         HStack {
             ForEach([ContentView.Tab.timer, .tasks, .settings], id: \.self) { tab in
@@ -73,8 +81,13 @@ struct ModernTabBar: View {
         .padding(8)
         .background {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.white)
-                .shadow(color: .black.opacity(0.05), radius: 15, x: 0, y: 5)
+                
+                .fill(themeManager.isDarkMode ? .ultraThinMaterial : .ultraThick)
+                .fill(themeManager.isDarkMode ? Color.black.opacity(0.2) : .white)
+                .shadow(
+                    color: themeManager.isDarkMode ? .black.opacity(0.15) : .black.opacity(0.05),
+                    radius: 15, x: 0, y: 5)
+                .opacity(selectedTab == .timer ? 0.2 : 1)
         }
     }
 }
@@ -83,7 +96,9 @@ struct TabButton: View {
     let tab: ContentView.Tab
     @Binding var selectedTab: ContentView.Tab
     var namespace: Namespace.ID
-
+    @Environment(\.colorScheme) private var colorScheme
+    private let themeManager = ThemeManager.shared
+    
     var body: some View {
         Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -93,13 +108,20 @@ struct TabButton: View {
             VStack(spacing: 6) {
                 Image(systemName: selectedTab == tab ? tab.selectedIcon : tab.icon)
                     .font(.system(size: 24, weight: selectedTab == tab ? .semibold : .regular))
-                    .foregroundStyle(selectedTab == tab ? tab.color : .gray.opacity(0.5))
+                    .foregroundStyle(
+                        selectedTab == tab
+                        ? tab.color
+                        : themeManager.isDarkMode ? .gray.opacity(0.7) : .gray.opacity(0.9)
+                    )
                     .symbolEffect(.bounce, value: selectedTab == tab)
-
+                
                 Text(tab.title)
                     .font(.system(size: 12, weight: selectedTab == tab ? .medium : .regular))
-                    .foregroundStyle(selectedTab == tab ? tab.color : .gray.opacity(0.5))
-
+                    .foregroundStyle(
+                        selectedTab == tab
+                        ? tab.color
+                        : themeManager.isDarkMode ? .gray.opacity(0.7) : .gray.opacity(0.5))
+                
             }
             .frame(height: 55)
         }
@@ -111,7 +133,7 @@ struct TabButton: View {
 extension ContentView {
     enum Tab: Hashable {
         case timer, tasks, settings
-
+        
         var icon: String {
             switch self {
             case .timer: return "clock"
@@ -119,7 +141,7 @@ extension ContentView {
             case .settings: return "gearshape"
             }
         }
-
+        
         var selectedIcon: String {
             switch self {
             case .timer: return "clock.fill"
@@ -127,7 +149,7 @@ extension ContentView {
             case .settings: return "gearshape.fill"
             }
         }
-
+        
         var title: String {
             switch self {
             case .timer: return "Timer"
@@ -135,7 +157,7 @@ extension ContentView {
             case .settings: return "Settings"
             }
         }
-
+        
         var color: Color {
             switch self {
             case .timer: return Color(hex: "FF5722")

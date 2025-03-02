@@ -1,3 +1,4 @@
+import Combine
 import SwiftData
 import SwiftUI
 
@@ -5,8 +6,12 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var settingsModels: [SettingsModel]
 
+    // ThemeManager referansı
+    @Environment(\.themeManager) private var themeManager
+
+    // Aktif ayarlar
     private var settings: SettingsModel {
-        // Ensure we always have a settings model
+        // Eğer hiç ayar yoksa, yeni bir tane oluştur
         if let firstSettings = settingsModels.first {
             return firstSettings
         } else {
@@ -16,77 +21,19 @@ struct SettingsView: View {
         }
     }
 
-    // Bindings for the settings properties
-    private var workDuration: Binding<Int> {
-        Binding(
-            get: { self.settings.workDuration },
-            set: { self.settings.workDuration = $0 }
-        )
-    }
-
-    private var shortBreakDuration: Binding<Int> {
-        Binding(
-            get: { self.settings.shortBreakDuration },
-            set: { self.settings.shortBreakDuration = $0 }
-        )
-    }
-
-    private var longBreakDuration: Binding<Int> {
-        Binding(
-            get: { self.settings.longBreakDuration },
-            set: { self.settings.longBreakDuration = $0 }
-        )
-    }
-
-    private var pomodorosUntilLongBreak: Binding<Int> {
-        Binding(
-            get: { self.settings.pomodorosUntilLongBreak },
-            set: { self.settings.pomodorosUntilLongBreak = $0 }
-        )
-    }
-
-    private var autoStartBreaks: Binding<Bool> {
-        Binding(
-            get: { self.settings.autoStartBreaks },
-            set: { self.settings.autoStartBreaks = $0 }
-        )
-    }
-
-    private var autoStartPomodoros: Binding<Bool> {
-        Binding(
-            get: { self.settings.autoStartPomodoros },
-            set: { self.settings.autoStartPomodoros = $0 }
-        )
-    }
-
-    private var isNotificationEnabled: Binding<Bool> {
-        Binding(
-            get: { self.settings.isNotificationEnabled },
-            set: { self.settings.isNotificationEnabled = $0 }
-        )
-    }
-
-    private var isSoundEnabled: Binding<Bool> {
-        Binding(
-            get: { self.settings.isSoundEnabled },
-            set: { self.settings.isSoundEnabled = $0 }
-        )
-    }
-
-    private var isDarkModeEnabled: Binding<Bool> {
-        Binding(
-            get: { self.settings.isDarkModeEnabled },
-            set: { self.settings.isDarkModeEnabled = $0 }
-        )
-    }
-
     var body: some View {
         List {
             Group {
                 Section("Timer Durations") {
                     Stepper(
                         "Work: \(settings.workDuration) minutes",
-                        value: workDuration,
+                        value: Binding(
+                            get: { settings.workDuration },
+                            set: { newValue in
+                                settings.workDuration = newValue
+                                try? modelContext.save()
+                            }
+                        ),
                         in: 15...60,
                         step: 5
                     )
@@ -94,7 +41,13 @@ struct SettingsView: View {
 
                     Stepper(
                         "Short Break: \(settings.shortBreakDuration) minutes",
-                        value: shortBreakDuration,
+                        value: Binding(
+                            get: { settings.shortBreakDuration },
+                            set: { newValue in
+                                settings.shortBreakDuration = newValue
+                                try? modelContext.save()
+                            }
+                        ),
                         in: 5...15,
                         step: 5
                     )
@@ -102,7 +55,13 @@ struct SettingsView: View {
 
                     Stepper(
                         "Long Break: \(settings.longBreakDuration) minutes",
-                        value: longBreakDuration,
+                        value: Binding(
+                            get: { settings.longBreakDuration },
+                            set: { newValue in
+                                settings.longBreakDuration = newValue
+                                try? modelContext.save()
+                            }
+                        ),
                         in: 10...30,
                         step: 5
                     )
@@ -110,7 +69,13 @@ struct SettingsView: View {
 
                     Stepper(
                         "Pomodoros Until Long Break: \(settings.pomodorosUntilLongBreak)",
-                        value: pomodorosUntilLongBreak,
+                        value: Binding(
+                            get: { settings.pomodorosUntilLongBreak },
+                            set: { newValue in
+                                settings.pomodorosUntilLongBreak = newValue
+                                try? modelContext.save()
+                            }
+                        ),
                         in: 4...10,
                         step: 1
                     )
@@ -118,26 +83,70 @@ struct SettingsView: View {
                 }
 
                 Section("Automation") {
-                    Toggle("Auto-start Breaks", isOn: autoStartBreaks)
-                        .padding(.vertical, 2)
-                    Toggle("Auto-start Pomodoros", isOn: autoStartPomodoros)
-                        .padding(.vertical, 2)
+                    Toggle(
+                        "Auto-start Breaks",
+                        isOn: Binding(
+                            get: { settings.autoStartBreaks },
+                            set: { newValue in
+                                settings.autoStartBreaks = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
+
+                    Toggle(
+                        "Auto-start Pomodoros",
+                        isOn: Binding(
+                            get: { settings.autoStartPomodoros },
+                            set: { newValue in
+                                settings.autoStartPomodoros = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
                 }
 
                 Section("Notifications") {
-                    Toggle("Show Notifications", isOn: isNotificationEnabled)
-                        .padding(.vertical, 2)
-                    Toggle("Play Sound", isOn: isSoundEnabled)
-                        .padding(.vertical, 2)
+                    Toggle(
+                        "Show Notifications",
+                        isOn: Binding(
+                            get: { settings.isNotificationEnabled },
+                            set: { newValue in
+                                settings.isNotificationEnabled = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
+
+                    Toggle(
+                        "Play Sound",
+                        isOn: Binding(
+                            get: { settings.isSoundEnabled },
+                            set: { newValue in
+                                settings.isSoundEnabled = newValue
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
                 }
 
                 Section("Appearance") {
-                    Toggle("Dark Mode", isOn: isDarkModeEnabled)
-                        .padding(.vertical, 2)
-                        .onChange(of: settings.isDarkModeEnabled) { _, newValue in
-                            // Apply theme change
-                            setAppearance(darkMode: newValue)
-                        }
+                    Toggle(
+                        "Dark Mode",
+                        isOn: Binding(
+                            get: { settings.isDarkModeEnabled },
+                            set: { newValue in
+                                settings.isDarkModeEnabled = newValue
+                                themeManager.setDarkMode(newValue)
+                                try? modelContext.save()
+                            }
+                        )
+                    )
+                    .padding(.vertical, 2)
                 }
 
                 Section {
@@ -166,7 +175,9 @@ struct SettingsView: View {
 
                 Section {
                     Button("Reset to Defaults") {
-                        resetToDefaults()
+                        settings.resetToDefaults()
+                        themeManager.setDarkMode(settings.isDarkModeEnabled)
+                        try? modelContext.save()
                     }
                     .padding(.vertical, 2)
                 }
@@ -177,32 +188,10 @@ struct SettingsView: View {
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 100)
         }
-    }
-
-    private func resetToDefaults() {
-        settings.workDuration = 25
-        settings.shortBreakDuration = 5
-        settings.longBreakDuration = 15
-        settings.pomodorosUntilLongBreak = 4
-        settings.autoStartBreaks = false
-        settings.autoStartPomodoros = false
-        settings.isNotificationEnabled = true
-        settings.isSoundEnabled = true
-        settings.isDarkModeEnabled = false
-
-        // Apply theme change if needed
-        setAppearance(darkMode: false)
-    }
-
-    private func setAppearance(darkMode: Bool) {
-        #if os(iOS)
-            // Apply appearance change
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                let window = windowScene.windows.first
-            {
-                window.overrideUserInterfaceStyle = darkMode ? .dark : .light
-            }
-        #endif
+        .onAppear {
+            // Tema yöneticisini güncelle
+            themeManager.setDarkMode(settings.isDarkModeEnabled)
+        }
     }
 }
 

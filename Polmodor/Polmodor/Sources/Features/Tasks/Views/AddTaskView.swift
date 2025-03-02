@@ -130,10 +130,3 @@ struct AddTaskView: View {
         modelContext.insert(task)
     }
 }
-
-#Preview {
-    NavigationStack {
-        AddTaskView()
-    }
-    .modelContainer(PreviewContainer.container)
-}

@@ -58,6 +58,7 @@ struct TaskListView: View {
         }
         .navigationTitle("Tasks")
         .navigationBarTitleDisplayMode(.large)
+
         .searchable(text: $searchText, prompt: "Search tasks")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -207,7 +208,9 @@ struct TaskListView: View {
             } else {
                 taskListContent
             }
-        }.padding(.horizontal, 16)
+        }
+        .scrollIndicators(.hidden)
+        .padding(.horizontal, 16)
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
     }
@@ -266,9 +269,14 @@ struct ScaleButtonStyle: ButtonStyle {
     }
 }
 
-#Preview {
-    NavigationStack {
-        TaskListView()
+struct TaskListView_Previews: PreviewProvider {
+    private let modelContainer2 = ModelContainerSetup.setupModelContainer()
+
+    static var previews: some View {
+        NavigationStack {
+            TaskListView()
+
+        }
+        .modelContainer(ModelContainerSetup.setupModelContainer())
     }
-    .modelContainer(PreviewContainer.container)
 }

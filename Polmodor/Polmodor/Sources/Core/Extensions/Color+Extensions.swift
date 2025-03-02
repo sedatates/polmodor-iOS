@@ -9,7 +9,6 @@ import SwiftUI
 extension Color {
     static let timerBackground = Color("TimerBackground")
     static let taskBackground = Color("TaskBackground")
-    
 
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -29,6 +28,7 @@ extension Color {
         default:
             (a, r, g, b) = (1, 1, 1, 0)
         }
+
         self.init(
             .sRGB,
             red: Double(r) / 255,
@@ -94,6 +94,25 @@ extension Color {
         #else
             return nil
         #endif
+    }
+
+    // Additional color-related extensions can be added here
+
+    // Return hex string representation of the color
+    var hexString: String? {
+        guard let components = cgColor?.components, components.count >= 3 else {
+            return nil
+        }
+
+        let r = Float(components[0])
+        let g = Float(components[1])
+        let b = Float(components[2])
+
+        return String(
+            format: "#%02lX%02lX%02lX",
+            lroundf(r * 255),
+            lroundf(g * 255),
+            lroundf(b * 255))
     }
 }
 

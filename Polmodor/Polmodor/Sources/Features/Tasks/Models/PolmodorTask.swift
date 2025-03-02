@@ -201,7 +201,33 @@ extension PolmodorTask {
                 isTimerRunning: false,
                 subTasks: []
             ),
-            
+            PolmodorTask(
+                id: UUID(),
+                title: "Go for a Run",
+                taskDescription: "Exercise regularly to maintain health",
+                iconName: "person.running",
+                category: TaskCategory.defaultCategories[2],
+                priority: .low,
+                timeSpent: 30,
+                timeRemaining: 150,
+                dueDate: Date().addingTimeInterval(86400 * 5),
+                completed: false,
+                isTimerRunning: false,
+                subTasks: [
+                    PolmodorSubTask(
+                        id: UUID(),
+                        title: "Morning Run",
+                        completed: false,
+                        pomodoro: .init(total: 2, completed: 0)
+                    ),
+                    PolmodorSubTask(
+                        id: UUID(),
+                        title: "Evening Run",
+                        completed: false,
+                        pomodoro: .init(total: 2, completed: 0)
+                    ),
+                ]
+            ),
         ]
     }
 }

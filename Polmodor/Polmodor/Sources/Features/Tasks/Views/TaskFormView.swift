@@ -171,8 +171,3 @@ private struct IconPicker: View {
         }
     }
 }
-
-#Preview {
-    TaskFormView(onSave: { _ in })
-        .modelContainer(PreviewContainer.container)
-}

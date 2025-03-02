@@ -44,13 +44,15 @@ enum PomodoroState: String {
     }
 
     var duration: TimeInterval {
+        let settingsManager = SettingsManager.shared
+
         switch self {
         case .work:
-            return TimeInterval(UserDefaults.standard.integer(forKey: "workDuration")) * 60
+            return TimeInterval(settingsManager.workDurationMinutes) * 60
         case .shortBreak:
-            return TimeInterval(UserDefaults.standard.integer(forKey: "shortBreakDuration")) * 60
+            return TimeInterval(settingsManager.shortBreakDurationMinutes) * 60
         case .longBreak:
-            return TimeInterval(UserDefaults.standard.integer(forKey: "longBreakDuration")) * 60
+            return TimeInterval(settingsManager.longBreakDurationMinutes) * 60
         }
     }
 
