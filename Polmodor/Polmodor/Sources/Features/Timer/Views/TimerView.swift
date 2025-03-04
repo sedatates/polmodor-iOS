@@ -113,8 +113,18 @@ struct TimerView: View {
     private func handleLockStateChange(_ newValue: Bool) {
         if newValue {
             handleLock()
+
+            // Update Live Activity lock state
+            if viewModel.isRunning {
+                LiveActivityManager.shared.toggleLockLiveActivity(isLocked: true)
+            }
         } else {
             handleUnlock()
+
+            // Update Live Activity lock state
+            if viewModel.isRunning {
+                LiveActivityManager.shared.toggleLockLiveActivity(isLocked: false)
+            }
         }
     }
 

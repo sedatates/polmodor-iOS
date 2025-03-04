@@ -6,12 +6,52 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5913E9332D74EB0900EB08BA /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5913E9142D74EADD00EB08BA /* WidgetKit.framework */; };
+		5913E9342D74EB0900EB08BA /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5913E9162D74EADD00EB08BA /* SwiftUI.framework */; };
+		5913E9452D74EB0900EB08BA /* PolmodorWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5913E9322D74EB0900EB08BA /* PolmodorWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5913E9432D74EB0900EB08BA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 59F84D182D6495F30099E619 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5913E9312D74EB0900EB08BA;
+			remoteInfo = PolmodorWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5913E9292D74EADE00EB08BA /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5913E9452D74EB0900EB08BA /* PolmodorWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		5913E9142D74EADD00EB08BA /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		5913E9162D74EADD00EB08BA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		5913E9322D74EB0900EB08BA /* PolmodorWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PolmodorWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		59F84D202D6495F30099E619 /* Polmodor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polmodor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		76D52EC7A611697C74112283 /* Pods_Polmodor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Polmodor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		5913E9492D74EB0900EB08BA /* Exceptions for "PolmodorWidget" folder in "PolmodorWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 5913E9312D74EB0900EB08BA /* PolmodorWidgetExtension */;
+		};
 		59F84D302D6495F40099E619 /* Exceptions for "Polmodor" folder in "Polmodor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -22,6 +62,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		5913E9352D74EB0900EB08BA /* PolmodorWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				5913E9492D74EB0900EB08BA /* Exceptions for "PolmodorWidget" folder in "PolmodorWidgetExtension" target */,
+			);
+			path = PolmodorWidget;
+			sourceTree = "<group>";
+		};
 		59F84D222D6495F30099E619 /* Polmodor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -33,6 +81,15 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		5913E92F2D74EB0900EB08BA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5913E9342D74EB0900EB08BA /* SwiftUI.framework in Frameworks */,
+				5913E9332D74EB0900EB08BA /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		59F84D1D2D6495F30099E619 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -47,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				59F84D222D6495F30099E619 /* Polmodor */,
+				5913E9352D74EB0900EB08BA /* PolmodorWidget */,
 				59F84D212D6495F30099E619 /* Products */,
 				F242B28E895C074F3145478D /* Frameworks */,
 			);
@@ -56,6 +114,7 @@
 			isa = PBXGroup;
 			children = (
 				59F84D202D6495F30099E619 /* Polmodor.app */,
+				5913E9322D74EB0900EB08BA /* PolmodorWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -64,6 +123,8 @@
 			isa = PBXGroup;
 			children = (
 				76D52EC7A611697C74112283 /* Pods_Polmodor.framework */,
+				5913E9142D74EADD00EB08BA /* WidgetKit.framework */,
+				5913E9162D74EADD00EB08BA /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -71,6 +132,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		5913E9312D74EB0900EB08BA /* PolmodorWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5913E9462D74EB0900EB08BA /* Build configuration list for PBXNativeTarget "PolmodorWidgetExtension" */;
+			buildPhases = (
+				5913E92E2D74EB0900EB08BA /* Sources */,
+				5913E92F2D74EB0900EB08BA /* Frameworks */,
+				5913E9302D74EB0900EB08BA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5913E9352D74EB0900EB08BA /* PolmodorWidget */,
+			);
+			name = PolmodorWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = PolmodorWidgetExtension;
+			productReference = 5913E9322D74EB0900EB08BA /* PolmodorWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		59F84D1F2D6495F30099E619 /* Polmodor */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 59F84D312D6495F40099E619 /* Build configuration list for PBXNativeTarget "Polmodor" */;
@@ -78,10 +161,12 @@
 				59F84D1C2D6495F30099E619 /* Sources */,
 				59F84D1D2D6495F30099E619 /* Frameworks */,
 				59F84D1E2D6495F30099E619 /* Resources */,
+				5913E9292D74EADE00EB08BA /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				5913E9442D74EB0900EB08BA /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				59F84D222D6495F30099E619 /* Polmodor */,
@@ -101,6 +186,9 @@
 				LastSwiftUpdateCheck = 1620;
 				LastUpgradeCheck = 1620;
 				TargetAttributes = {
+					5913E9312D74EB0900EB08BA = {
+						CreatedOnToolsVersion = 16.2;
+					};
 					59F84D1F2D6495F30099E619 = {
 						CreatedOnToolsVersion = 16.2;
 					};
@@ -121,11 +209,19 @@
 			projectRoot = "";
 			targets = (
 				59F84D1F2D6495F30099E619 /* Polmodor */,
+				5913E9312D74EB0900EB08BA /* PolmodorWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		5913E9302D74EB0900EB08BA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		59F84D1E2D6495F30099E619 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -136,6 +232,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		5913E92E2D74EB0900EB08BA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		59F84D1C2D6495F30099E619 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -145,7 +248,69 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		5913E9442D74EB0900EB08BA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5913E9312D74EB0900EB08BA /* PolmodorWidgetExtension */;
+			targetProxy = 5913E9432D74EB0900EB08BA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		5913E9472D74EB0900EB08BA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K9878XM64L;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PolmodorWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PolmodorWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.polmodor.PolmodorWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5913E9482D74EB0900EB08BA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K9878XM64L;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PolmodorWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PolmodorWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.polmodor.PolmodorWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		59F84D322D6495F40099E619 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -330,6 +495,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		5913E9462D74EB0900EB08BA /* Build configuration list for PBXNativeTarget "PolmodorWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5913E9472D74EB0900EB08BA /* Debug */,
+				5913E9482D74EB0900EB08BA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		59F84D1B2D6495F30099E619 /* Build configuration list for PBXProject "Polmodor" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

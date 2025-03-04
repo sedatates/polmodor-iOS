@@ -6,6 +6,8 @@
 //
 
 import Foundation
+// Gerekli modelleri import et
+@preconcurrency import Polmodor
 import SwiftData
 import SwiftUI
 
@@ -38,7 +40,7 @@ struct SubtaskRowView: View {
     var body: some View {
         HStack {
             // Subtask title and progress
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 2.5) {
                 Text(subtask.title)
                     .font(.subheadline)
                     .strikethrough(isCompleted)
@@ -55,8 +57,8 @@ struct SubtaskRowView: View {
             Button(action: {
                 if !isCompleted {
                     if isActiveSubtask {
-                        // Clear the active subtask
-                        timerViewModel.setActiveSubtask(nil as UUID?)
+                        // Clear the active subtask - fix the nil passing style
+                        timerViewModel.setActiveSubtask(nil)
 
                         // Provide haptic feedback when clearing task
                         #if os(iOS)
@@ -64,7 +66,7 @@ struct SubtaskRowView: View {
                             generator.impactOccurred()
                         #endif
                     } else {
-                        // Set this as the active subtask - this will automatically persist via TimerViewModel
+                        // Set this as the active subtask - no need for if let since id is not optional
                         timerViewModel.setActiveSubtask(subtask.id)
 
                         // Provide stronger haptic feedback when setting active task
@@ -115,7 +117,7 @@ struct SubtaskRowView: View {
     private func completeSubtask() {
         // If the task is completed, it should no longer be the active task
         if timerViewModel.activeSubtaskID == subtask.id {
-            timerViewModel.setActiveSubtask(nil as UUID?)
+            timerViewModel.setActiveSubtask(nil)
         }
 
         // Update our local state for immediate UI feedback

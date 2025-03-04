@@ -1,6 +1,7 @@
 ---
 description: 
 globs: **/*
+alwaysApply: false
 ---
 # Polmodor iOS Native Implementation Guide
 
@@ -169,23 +170,6 @@ The theme system ensures a consistent and visually appealing look and feel acros
 
 This centralized theme management simplifies updates to the app's appearance, ensuring consistency and reducing redundancy.
 
----
-
-### **Core Data Integration**
-
-Core Data is used for persisting task data, ensuring that tasks are reliably stored and retrieved.
-
-- **TaskEntity**:
-  - Represents the task model in Core Data, with attributes matching the task structure (e.g., ID, title, Pomodoro count, status, creation date).
-- **TaskService**:
-  - Handles fetching and adding tasks, abstracting Core Data operations.
-  - Ensures tasks are sorted by creation date for display in the UI.
-  - Provides error handling for persistence issues, such as database failures.
-
-This integration supports the app's task management feature, allowing users to track tasks across sessions.
-
----
-
 ### **Essential Features**
 
 #### **Background Modes**
@@ -208,23 +192,6 @@ This integration supports the app's task management feature, allowing users to t
   - Custom durations for work sessions, short breaks, and long breaks.
   - Other app settings, such as notification preferences or theme options.
 - This ensures that user customizations are saved and applied across app sessions.
-
----
-
-### **Testing Strategy**
-
-Unit tests are implemented for critical components to maintain reliability and catch regressions early.
-
-- **TimerViewModelTests**:
-  - Verify the timer's start, pause, and reset functionalities.
-  - Ensure the timer transitions correctly between states (e.g., work to short break).
-- **TaskServiceTests**:
-  - Ensure tasks are correctly added, fetched, and deleted from Core Data.
-  - Test edge cases, such as handling empty task lists or persistence errors.
-
-These tests help ensure the app's core features work as expected, reducing bugs in production.
-
----
 
 ### **Performance Optimization**
 

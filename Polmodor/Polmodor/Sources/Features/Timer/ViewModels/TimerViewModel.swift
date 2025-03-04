@@ -6,6 +6,7 @@ import UserNotifications
 
 #if os(iOS)
     import UIKit
+    import ActivityKit
 #endif
 
 @MainActor
@@ -22,6 +23,14 @@ final class TimerViewModel: ObservableObject {
     private var timer: AnyCancellable?
     private var modelContext: ModelContext?
     private var settingsCancellable: AnyCancellable?
+
+    // MARK: - Live Activity Support
+    private var supportsLiveActivity: Bool {
+        if #available(iOS 16.1, *) {
+            return ActivityAuthorizationInfo().areActivitiesEnabled
+        }
+        return false
+    }
 
     private var totalTime: TimeInterval {
         state.duration
@@ -117,6 +126,13 @@ final class TimerViewModel: ObservableObject {
             completedPomodoros: completedPomodoros,
             isRunning: isRunning
         )
+
+        // Also save the active task title for widget and live activity use
+        if let taskTitle = activeSubtaskTitle {
+            UserDefaults.standard.set(taskTitle, forKey: "TimerStateManager.activeTaskTitle")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "TimerStateManager.activeTaskTitle")
+        }
     }
 
     /// Restores the timer state from persistent storage
@@ -146,6 +162,85 @@ final class TimerViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Live Activity Methods
+
+    /// Start or update a Live Activity for the current timer
+    private func updateLiveActivity() {
+        // Early return if device doesn't support Live Activities
+        guard supportsLiveActivity else { return }
+
+        let taskTitle = activeSubtaskTitle ?? "Polmodor Timer"
+        let remainingTimeSeconds = Int(timeRemaining)
+        let duration = Int(state.duration)
+        let breakType = state == .shortBreak ? "short" : (state == .longBreak ? "long" : "none")
+
+        // Get parent task name if available
+        var parentTaskName: String? = nil
+        var totalPomodoros = 0
+        var completedPomodoros = 0
+
+        if let subtaskID = activeSubtaskID, let context = modelContext {
+            do {
+                // Fetch the subtask
+                let subtaskDescriptor = FetchDescriptor<PolmodorSubTask>(
+                    predicate: #Predicate { subtask in
+                        subtask.id == subtaskID
+                    }
+                )
+                let results = try context.fetch(subtaskDescriptor)
+
+                if let subtask = results.first, let parentTask = subtask.task {
+                    parentTaskName = parentTask.title
+                    totalPomodoros = subtask.pomodoro.total
+                    completedPomodoros = subtask.pomodoro.completed
+                }
+            } catch {
+                print("Error fetching task details for Live Activity: \(error)")
+            }
+        }
+
+        do {
+            LiveActivityManager.shared.startLiveActivity(
+                taskTitle: taskTitle,
+                remainingTime: remainingTimeSeconds,
+                isBreak: state != .work,
+                breakType: breakType,
+                startedAt: isRunning ? Date() : nil,
+                pausedAt: isRunning ? nil : Date(),
+                duration: duration,
+                parentTaskName: parentTaskName,
+                completedPomodoros: completedPomodoros,
+                totalPomodoros: totalPomodoros,
+                isLocked: false
+            )
+        } catch {
+            print("Failed to start Live Activity: \(error.localizedDescription)")
+            // Live Activity hatası uygulama çökmesine neden olmamalı
+        }
+    }
+
+    /// Update the existing Live Activity
+    private func updateLiveActivityState() {
+        // Early return if device doesn't support Live Activities
+        guard supportsLiveActivity else { return }
+
+        // Update the Live Activity with current timer state
+        do {
+            LiveActivityManager.shared.updateLiveActivity(
+                remainingTime: Int(timeRemaining),
+                pausedAt: isRunning ? nil : Date()
+            )
+        } catch {
+            print("Failed to update Live Activity state: \(error.localizedDescription)")
+            // Live Activity güncellemesi başarısız olursa uygulama çökmemeli
+        }
+    }
+
+    /// End the current Live Activity
+    private func endLiveActivity() {
+        LiveActivityManager.shared.endLiveActivity()
+    }
+
     // MARK: - Public Methods
     func toggleTimer() {
         if isRunning {
@@ -156,6 +251,9 @@ final class TimerViewModel: ObservableObject {
 
         // Save state after toggling
         saveTimerState()
+
+        // Update Live Activity state
+        updateLiveActivityState()
     }
 
     func startTimer() {
@@ -170,6 +268,9 @@ final class TimerViewModel: ObservableObject {
 
         // If we have an active subtask, update its parent task's status
         updateActiveTaskStatus(isRunning: true)
+
+        // Start or update Live Activity
+        updateLiveActivity()
     }
 
     func pauseTimer() {
@@ -181,6 +282,9 @@ final class TimerViewModel: ObservableObject {
 
         // Save timer state when paused
         saveTimerState()
+
+        // Update Live Activity to show paused state
+        updateLiveActivityState()
     }
 
     func resetTimer() {
@@ -192,6 +296,9 @@ final class TimerViewModel: ObservableObject {
 
         // Save state after reset
         saveTimerState()
+
+        // End the current Live Activity
+        endLiveActivity()
     }
 
     func skipToNext() {
@@ -223,6 +330,9 @@ final class TimerViewModel: ObservableObject {
 
         // Save state after skipping
         saveTimerState()
+
+        // Update Live Activity with new timer state
+        updateLiveActivity()
     }
 
     // Set active subtask for the timer
@@ -241,6 +351,11 @@ final class TimerViewModel: ObservableObject {
 
         // Save state after changing active subtask
         saveTimerState()
+
+        // Update Live Activity with new task title if running
+        if isRunning {
+            updateLiveActivity()
+        }
     }
 
     // MARK: - Private Methods
@@ -256,6 +371,9 @@ final class TimerViewModel: ObservableObject {
         // Save state periodically (e.g. every 15 seconds)
         if Int(timeRemaining) % 15 == 0 {
             saveTimerState()
+
+            // Update Live Activity periodically
+            updateLiveActivityState()
         }
     }
 
@@ -306,6 +424,9 @@ final class TimerViewModel: ObservableObject {
                 message: message
             )
         }
+
+        // End Live Activity when timer completes
+        endLiveActivity()
     }
 
     // Increment the pomodoro count for a subtask
