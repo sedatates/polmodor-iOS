@@ -22,11 +22,8 @@ public struct PolmodorLiveActivityAttributes: ActivityAttributes {
     /// Remaining time in seconds
     public var remainingTime: Int
 
-    /// Whether the timer represents a break session
-    public var isBreak: Bool
-
-    /// Type of break (short, long, or none)
-    public var breakType: String
+    /// Current timer state (work, shortBreak, longBreak)
+    public var sessionType: SessionType
 
     /// Time when the timer was started
     public var startedAt: Date?
@@ -37,6 +34,60 @@ public struct PolmodorLiveActivityAttributes: ActivityAttributes {
     /// Total duration of the current session in seconds
     public var duration: Int
 
+    /// Whether the timer is locked (to prevent accidental interruptions)
+    public var isLocked: Bool
+
+    /// Session progress - calculated from remaining time and duration
+    /// Only included when needed for display purposes
+    private var _progress: Double?
+
+    /// Computed properties for consistent widget rendering
+    public var progress: Double {
+      _progress ?? max(0.0, min(1.0, Double(duration - remainingTime) / Double(duration)))
+    }
+
+    /// Whether the current session is a break
+    public var isBreak: Bool {
+      sessionType == .shortBreak || sessionType == .longBreak
+    }
+
+    /// Break type string representation (for backward compatibility)
+    public var breakType: String {
+      switch sessionType {
+      case .shortBreak: return "short"
+      case .longBreak: return "long"
+      default: return "none"
+      }
+    }
+
+    /// Session type enum for cleaner state management
+    public enum SessionType: String, Codable, Hashable {
+      case work
+      case shortBreak
+      case longBreak
+    }
+
+    public init(
+      taskTitle: String,
+      remainingTime: Int,
+      sessionType: SessionType,
+      startedAt: Date?,
+      pausedAt: Date?,
+      duration: Int,
+      isLocked: Bool = false,
+      progress: Double? = nil
+    ) {
+      self.taskTitle = taskTitle
+      self.remainingTime = remainingTime
+      self.sessionType = sessionType
+      self.startedAt = startedAt
+      self.pausedAt = pausedAt
+      self.duration = duration
+      self.isLocked = isLocked
+      self._progress = progress
+    }
+
+    // Legacy initializer for backward compatibility
     public init(
       taskTitle: String,
       remainingTime: Int,
@@ -44,15 +95,25 @@ public struct PolmodorLiveActivityAttributes: ActivityAttributes {
       breakType: String,
       startedAt: Date?,
       pausedAt: Date?,
-      duration: Int
+      duration: Int,
+      isLocked: Bool = false,
+      progress: Double? = nil
     ) {
       self.taskTitle = taskTitle
       self.remainingTime = remainingTime
-      self.isBreak = isBreak
-      self.breakType = breakType
+
+      // Convert old format to new SessionType
+      if isBreak {
+        self.sessionType = breakType == "long" ? .longBreak : .shortBreak
+      } else {
+        self.sessionType = .work
+      }
+
       self.startedAt = startedAt
       self.pausedAt = pausedAt
       self.duration = duration
+      self.isLocked = isLocked
+      self._progress = progress
     }
   }
 

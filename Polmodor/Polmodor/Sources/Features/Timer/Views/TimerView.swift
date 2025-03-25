@@ -69,6 +69,16 @@ struct TimerView: View {
             .onChange(of: viewModel.activeSubtaskID) { oldValue, newValue in
                 loadActiveSubtask()
             }
+            .onReceive(
+                NotificationCenter.default.publisher(
+                    for: Notification.Name("ToggleLockPomodorTimer")
+                )
+            ) { _ in
+                // Handle lock toggle from Live Activity
+                withAnimation {
+                    isLocked.toggle()
+                }
+            }
             .withFloatingTabBarPadding()
         }
         .alert("Unlock Timer Controls?", isPresented: $showUnlockAlert) {
@@ -118,6 +128,9 @@ struct TimerView: View {
             if viewModel.isRunning {
                 LiveActivityManager.shared.toggleLockLiveActivity(isLocked: true)
             }
+
+            // Save lock state to UserDefaults for persistent storage
+            UserDefaults.standard.set(true, forKey: "TimerLockState")
         } else {
             handleUnlock()
 
@@ -125,6 +138,9 @@ struct TimerView: View {
             if viewModel.isRunning {
                 LiveActivityManager.shared.toggleLockLiveActivity(isLocked: false)
             }
+
+            // Save lock state to UserDefaults for persistent storage
+            UserDefaults.standard.set(false, forKey: "TimerLockState")
         }
     }
 

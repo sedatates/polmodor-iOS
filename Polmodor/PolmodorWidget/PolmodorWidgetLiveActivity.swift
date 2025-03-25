@@ -6,603 +6,468 @@
 //
 
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
-// MARK: - Live Activity Widget
+// MARK: - Live Activity Entry Point
 struct PolmodorWidgetLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PolmodorLiveActivityAttributes.self) { context in
-            // Lock screen/banner UI goes here
-            LockScreenLiveActivityView(context: context)
-                .activityBackgroundTint(.black.opacity(0.05))
-                .activitySystemActionForegroundColor(.black)
-
+            // The dynamic island live activity
+            DynamicIslandLiveActivityView(context: context)
+                .activityBackgroundTint(Color.clear)
+                .contentMargins(.all, 0)
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded UI goes here
-                DynamicIslandExpandedRegion(.leading) {
-                    ExpandedLeadingView(context: context)
-                }
-
-                DynamicIslandExpandedRegion(.trailing) {
-                    ExpandedTrailingView(context: context)
-                }
-
+                // Expanded UI
                 DynamicIslandExpandedRegion(.center) {
-                    ExpandedCenterView(context: context)
-                }
-
-                DynamicIslandExpandedRegion(.bottom) {
-                    ExpandedBottomView(context: context)
+                    expandedView(context: context)
                 }
             } compactLeading: {
-                CompactLeadingView(context: context)
+                // Compact leading
+                Image(
+                    systemName: sessionIcon(
+                        for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+                )
+                .font(.system(size: 14))
+                .foregroundStyle(
+                    stateColor(
+                        for: context.state.sessionType,
+                        isPaused: context.state.pausedAt != nil
+                    ))
             } compactTrailing: {
-                CompactTrailingView(context: context)
+                // Compact trailing
+                Text(
+                    "\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))"
+                )
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(
+                    stateColor(
+                        for: context.state.sessionType,
+                        isPaused: context.state.pausedAt != nil
+                    )
+                )
+                .contentTransition(.numericText())
+                
             } minimal: {
-                MinimalView(context: context)
+                // Minimal UI
+                Text(
+                    "\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))"
+                )
+                .monospacedDigit()
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(
+                    stateColor(
+                        for: context.state.sessionType,
+                        isPaused: context.state.pausedAt != nil
+                    )
+                )
+                .contentTransition(.numericText())
+                .style(.timer)
             }
-            .widgetURL(nil)
+            .keylineTint(
+                stateColor(
+                    for: context.state.sessionType,
+                    isPaused: context.state.pausedAt != nil
+                ))
         }
+    }
+
+    // Helper functions for the DynamicIsland configuration
+    private func stateColor(
+        for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+    ) -> Color {
+        if isPaused {
+            return .orange
+        }
+
+        switch sessionType {
+        case .work:
+            return .red
+        case .shortBreak:
+            return .green
+        case .longBreak:
+            return .blue
+        }
+    }
+
+    private func sessionIcon(
+        for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+    ) -> String {
+        if isPaused {
+            return "pause.circle.fill"
+        }
+
+        switch sessionType {
+        case .work:
+            return "timer.circle.fill"
+        case .shortBreak:
+            return "leaf.fill"
+        case .longBreak:
+            return "cup.and.saucer.fill"
+        }
+    }
+
+    // Expanded view inside the DynamicIsland
+    @ViewBuilder
+    private func expandedView(context: ActivityViewContext<PolmodorLiveActivityAttributes>)
+        -> some View
+    {
+        // We'll use our full DynamicIslandLiveActivityView here
+        DynamicIslandLiveActivityView(context: context)
+    }
+}
+
+// MARK: - Dynamic Island Live Activity View
+struct DynamicIslandLiveActivityView: View {
+    let context: ActivityViewContext<PolmodorLiveActivityAttributes>
+    @Environment(\.dynamicIslandExpandedDisplaySize) private var expandedDisplaySize
+
+    private var isPaused: Bool {
+        context.state.pausedAt != nil
+    }
+
+    private var stateColor: Color {
+        if isPaused {
+            return .orange
+        }
+
+        switch context.state.sessionType {
+        case .work:
+            return .red
+        case .shortBreak:
+            return .green
+        case .longBreak:
+            return .blue
+        }
+    }
+
+    private var sessionLabel: String {
+        switch context.state.sessionType {
+        case .work:
+            return "Focus"
+        case .shortBreak:
+            return "Short Break"
+        case .longBreak:
+            return "Long Break"
+        }
+    }
+
+    private var sessionIcon: String {
+        switch context.state.sessionType {
+        case .work:
+            return "timer.circle.fill"
+        case .shortBreak:
+            return "leaf.fill"
+        case .longBreak:
+            return "cup.and.saucer.fill"
+        }
+    }
+
+    var body: some View {
+        switch context.dynamicIslandExpandedDisplayState {
+        case .expanded:
+            // Expanded view (tapped Dynamic Island)
+            expandedView
+        case .minimal:
+            // Minimized view (compact pill or circular)
+            minimalView
+        default:
+            // Default compact view
+            compactView
+        }
+    }
+
+    // Expanded view - when the dynamic island is tapped
+    private var expandedView: some View {
+        VStack(spacing: 12) {
+            // Task title and session info
+            VStack(spacing: 4) {
+                if !context.state.taskTitle.isEmpty {
+                    Text(context.state.taskTitle)
+                        .font(.headline)
+                        .lineLimit(1)
+                }
+
+                HStack(spacing: 4) {
+                    Image(systemName: sessionIcon)
+                        .font(.system(size: 12))
+
+                    Text(sessionLabel)
+                        .font(.subheadline)
+                }
+                .foregroundStyle(stateColor)
+            }
+
+            // Timer
+            Text(
+                "\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))"
+            )
+            .font(.system(size: 34, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(stateColor.gradient)
+            .contentTransition(.numericText())
+            .animation(.snappy, value: context.state.remainingTime)
+            .style(.timer)  // Timer style for animation
+
+            // Control buttons
+            HStack(spacing: 24) {
+                // Skip button
+                Button {
+                    Task { try? await SkipTimerIntent().perform() }
+                } label: {
+                    Image(systemName: "forward.end.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.secondary)
+                }
+
+                // Play/Pause button - slightly larger
+                Button {
+                    Task { try? await PauseResumeTimerIntent().perform() }
+                } label: {
+                    Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(stateColor)
+                }
+
+                // Lock/Unlock button
+                Button {
+                    Task { try? await LockUnlockTimerIntent().perform() }
+                } label: {
+                    Image(systemName: context.state.isLocked ? "lock.fill" : "lock.open.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 4)
+        }
+        .padding(16)
+    }
+
+    // Compact view - standard dynamic island state
+    private var compactView: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: sessionIcon)
+                .font(.system(size: 16))
+                .foregroundStyle(stateColor)
+
+            Text(
+                "\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))"
+            )
+            .font(.system(size: 16, weight: .semibold, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(stateColor)
+            .contentTransition(.numericText())
+            .animation(.snappy, value: context.state.remainingTime)
+            .style(.timer)  // Timer style for animation
+        }
+        .padding(.horizontal, 8)
+    }
+
+    // Minimal view - smallest possible dynamic island display
+    private var minimalView: some View {
+        // For minimal, just show the time with proper color
+        Text(
+            "\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))"
+        )
+        .font(.system(size: 14, weight: .semibold, design: .rounded))
+        .monospacedDigit()
+        .foregroundStyle(stateColor)
+        .contentTransition(.numericText())
+        .animation(.snappy, value: context.state.remainingTime)
+        .style(.timer)
     }
 }
 
 // MARK: - Dynamic Island Views
-
-// MARK: Expanded Leading View
 struct ExpandedLeadingView: View {
     let context: ActivityViewContext<PolmodorLiveActivityAttributes>
 
+    private var isPaused: Bool {
+        context.state.pausedAt != nil
+    }
+
+    private var isCompleted: Bool {
+        context.state.remainingTime <= 0
+    }
+
+    private func sessionTitle(
+        for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+    ) -> String {
+        switch sessionType {
+        case .work:
+            return "Focus"
+        case .shortBreak:
+            return "Short Break"
+        case .longBreak:
+            return "Long Break"
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            // Session type indicator with icon
-            HStack(spacing: 4) {
-                Image(systemName: sessionIcon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(stateColor)
-
-                Text(sessionTitle)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-
-            // Task title
-            if !context.state.taskTitle.isEmpty {
-                Text(context.state.taskTitle)
-                    .font(.system(size: 14, weight: .semibold))
-                    .lineLimit(1)
-                    .foregroundStyle(.primary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 4)
-    }
-
-    private var sessionIcon: String {
-        if context.state.pausedAt != nil {
-            return "pause.circle.fill"
-        }
-
-        return context.state.isBreak
-            ? (context.state.breakType == "long" ? "cup.and.saucer.fill" : "leaf.fill")
-            : "brain.head.profile"
-    }
-
-    private var sessionTitle: String {
-        if context.state.pausedAt != nil {
-            return "Paused"
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? "Long Break" : "Short Break"
-        }
-
-        return "Focus"
-    }
-
-    private var stateColor: Color {
-        if context.state.pausedAt != nil {
-            return .orange
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? .blue : .green
-        }
-
-        return .red
+        // Session status icon with color based on state
+        Image(
+            systemName: sessionIcon(
+                for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+        )
+        .font(.system(size: 18, weight: .semibold))
+        .foregroundStyle(
+            stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+                .gradient
+        )
+        .symbolEffect(.pulse, options: .repeating, isActive: !isPaused && !isCompleted)
     }
 }
 
-// MARK: Expanded Trailing View
 struct ExpandedTrailingView: View {
     let context: ActivityViewContext<PolmodorLiveActivityAttributes>
 
     var body: some View {
-        VStack(alignment: .trailing) {
-            // Progress percentage
-            Text("\(Int(progress * 100))%")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.trailing, 4)
-    }
-
-    private var progress: Double {
-        let totalDuration = Double(context.state.duration)
-        let elapsedTime = Double(context.state.duration - context.state.remainingTime)
-        return max(0.0, min(1.0, elapsedTime / totalDuration))
+        // Show clean remaining time in trailing area
+        Text(
+            "\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))"
+        )
+        .font(.system(size: 16, weight: .semibold, design: .rounded))
+        .monospacedDigit()
+        .foregroundStyle(
+            stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+                .gradient
+        )
+        .contentTransition(.numericText())
     }
 }
 
-// MARK: Expanded Center View
 struct ExpandedCenterView: View {
     let context: ActivityViewContext<PolmodorLiveActivityAttributes>
 
+    private var isPaused: Bool {
+        context.state.pausedAt != nil
+    }
+
+    private var isCompleted: Bool {
+        context.state.remainingTime <= 0
+    }
+
     var body: some View {
-        HStack {
-            // Timer display using Date with .timer style
-            if let startedAt = context.state.startedAt {
-                Text(
-                    Date(timeIntervalSinceNow: Double(context.state.remainingTime))
-                        .addingTimeInterval(-Date().timeIntervalSince(startedAt)),
-                    style: .timer
+        // Task title area
+        VStack(spacing: 2) {
+            if isCompleted {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.green)
+            } else {
+                Image(
+                    systemName: sessionIcon(
+                        for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
                 )
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(stateColor)
-                .frame(maxWidth: .infinity)
-            } else {
-                // Fallback if startedAt is nil
-                Text(timeString)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(stateColor)
-                    .frame(maxWidth: .infinity)
-                    .contentTransition(.numericText())
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(
+                    stateColor(
+                        for: context.state.sessionType, isPaused: context.state.pausedAt != nil
+                    ).gradient
+                )
+                .symbolEffect(.pulse, options: .repeating, isActive: !isPaused)
             }
+
+            Text(context.state.taskTitle)
+                .font(.headline)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
-    }
-
-    // Keep the original timeString as fallback
-    private var timeString: String {
-        let minutes = context.state.remainingTime / 60
-        let seconds = context.state.remainingTime % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    private var stateColor: Color {
-        if context.state.pausedAt != nil {
-            return .orange
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? .blue : .green
-        }
-
-        return .red
     }
 }
 
-// MARK: Expanded Bottom View
-struct ExpandedBottomView: View {
-    let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-
-    var body: some View {
-        VStack(spacing: 8) {
-            // Progress bar
-            ProgressView(value: progress)
-                .progressViewStyle(LinearProgressViewStyle(tint: stateColor))
-                .frame(height: 4)
-
-            // Control buttons
-            HStack {
-                // Cancel button
-                Button {
-                    // Handled by system
-                } label: {
-                    Label("Stop", systemImage: "stop.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .background(
-                            Capsule()
-                                .fill(.red.opacity(0.9))
-                        )
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                // Play/Pause button
-                Button {
-                    // Handled by system
-                } label: {
-                    Label(
-                        context.state.pausedAt != nil ? "Resume" : "Pause",
-                        systemImage: context.state.pausedAt != nil ? "play.fill" : "pause.fill"
-                    )
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 12)
-                    .background(
-                        Capsule()
-                            .fill(stateColor.opacity(0.9))
-                    )
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                // Skip button
-                Button {
-                    // Handled by system
-                } label: {
-                    Label("Skip", systemImage: "forward.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 12)
-                        .background(
-                            Capsule()
-                                .fill(Color.secondary.opacity(0.8))
-                        )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 4)
-    }
-
-    private var progress: Double {
-        let totalDuration = Double(context.state.duration)
-        let elapsedTime = Double(context.state.duration - context.state.remainingTime)
-        return max(0.0, min(1.0, elapsedTime / totalDuration))
-    }
-
-    private var stateColor: Color {
-        if context.state.pausedAt != nil {
+// Helper methods for all Dynamic Island components
+extension View {
+    func stateColor(
+        for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+    ) -> Color {
+        if isPaused {
             return .orange
         }
 
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? .blue : .green
+        switch sessionType {
+        case .work:
+            return .red
+        case .shortBreak:
+            return .green
+        case .longBreak:
+            return .blue
+        }
+    }
+
+    func sessionIcon(
+        for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+    ) -> String {
+        if isPaused {
+            return "pause.circle.fill"
         }
 
-        return .red
+        switch sessionType {
+        case .work:
+            return "timer.circle.fill"
+        case .shortBreak:
+            return "leaf.fill"
+        case .longBreak:
+            return "cup.and.saucer.fill"
+        }
     }
 }
 
-// MARK: Compact Leading View
-struct CompactLeadingView: View {
-    let context: ActivityViewContext<PolmodorLiveActivityAttributes>
+// MARK: - Previews
+struct PolmodorWidgetLiveActivity_Previews: PreviewProvider {
+    static let attributes = PolmodorLiveActivityAttributes(name: "Polmodor")
+    static let contentState = PolmodorLiveActivityAttributes.ContentState(
+        taskTitle: "Complete project report",
+        remainingTime: 1500,
+        sessionType: .work,
+        startedAt: Date(),
+        pausedAt: nil,
+        duration: 1500,
+        isLocked: false
+    )
+
+    static var previews: some View {
+        attributes
+            .previewContext(contentState, viewKind: .dynamicIsland(.compact))
+            .previewDisplayName("Island Compact")
+        attributes
+            .previewContext(contentState, viewKind: .dynamicIsland(.expanded))
+            .previewDisplayName("Island Expanded")
+        attributes
+            .previewContext(contentState, viewKind: .dynamicIsland(.minimal))
+            .previewDisplayName("Minimal")
+        attributes
+            .previewContext(contentState, viewKind: .content)
+            .previewDisplayName("Notification")
+    }
+}
+
+// MARK: - TimerCircle
+// This component is kept for backward compatibility but no longer used in the new design
+struct TimerCircle: View {
+    var progress: Double
+    var color: Color
 
     var body: some View {
         ZStack {
+            // Background circle
             Circle()
-                .fill(stateColor.opacity(0.2))
-                .frame(width: 28, height: 28)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 5)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Image(systemName: sessionIcon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(stateColor)
-        }
-    }
-
-    private var sessionIcon: String {
-        if context.state.pausedAt != nil {
-            return "pause.fill"
-        }
-
-        return context.state.isBreak
-            ? (context.state.breakType == "long" ? "cup.and.saucer.fill" : "leaf.fill")
-            : "brain.head.profile"
-    }
-
-    private var stateColor: Color {
-        if context.state.pausedAt != nil {
-            return .orange
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? .blue : .green
-        }
-
-        return .red
-    }
-}
-
-// MARK: Compact Trailing View
-struct CompactTrailingView: View {
-    let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-
-    var body: some View {
-        if let startedAt = context.state.startedAt {
-            Text(
-                Date(timeIntervalSinceNow: Double(context.state.remainingTime))
-                    .addingTimeInterval(-Date().timeIntervalSince(startedAt)),
-                style: .timer
-            )
-            .font(.system(size: 14, weight: .bold, design: .rounded))
-            .monospacedDigit()
-            .foregroundStyle(stateColor)
-        } else {
-            Text(timeString)
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(stateColor)
-                .contentTransition(.numericText())
-        }
-    }
-
-    // Keep the original timeString as fallback
-    private var timeString: String {
-        let minutes = context.state.remainingTime / 60
-        let seconds = context.state.remainingTime % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    private var stateColor: Color {
-        if context.state.pausedAt != nil {
-            return .orange
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? .blue : .green
-        }
-
-        return .red
-    }
-}
-
-// MARK: Minimal View
-struct MinimalView: View {
-    let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-
-    var body: some View {
-        ZStack {
+            // Progress circle
             Circle()
-                .fill(stateColor.opacity(0.2))
-
-            if context.state.pausedAt != nil {
-                Image(systemName: "pause.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(stateColor)
-            } else {
-                // Show minutes remaining
-                Text("\(context.state.remainingTime / 60)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(stateColor)
-                    .contentTransition(.numericText())
-            }
+                .trim(from: 0, to: CGFloat(progress))
+                .stroke(
+                    color,
+                    style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .rotationEffect(.degrees(-90))
+                .animation(.linear, value: progress)
         }
     }
-
-    private var stateColor: Color {
-        if context.state.pausedAt != nil {
-            return .orange
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? .blue : .green
-        }
-
-        return .red
-    }
-}
-
-// MARK: - Lock Screen Live Activity View
-struct LockScreenLiveActivityView: View {
-    let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-
-    var body: some View {
-        HStack {
-            // Left section: Task info
-            VStack(alignment: .leading, spacing: 4) {
-                // Session type indicator
-                HStack(spacing: 4) {
-                    Image(systemName: sessionIcon)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(stateColor)
-
-                    Text(sessionTitle)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-
-                // Task title
-                if !context.state.taskTitle.isEmpty {
-                    Text(context.state.taskTitle)
-                        .font(.system(size: 16, weight: .semibold))
-                        .lineLimit(1)
-                        .foregroundStyle(.primary)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer()
-
-            // Right section: Timer and controls
-            VStack(alignment: .trailing, spacing: 6) {
-                // Timer display
-                if let startedAt = context.state.startedAt {
-                    Text(
-                        Date(timeIntervalSinceNow: Double(context.state.remainingTime))
-                            .addingTimeInterval(-Date().timeIntervalSince(startedAt)),
-                        style: .timer
-                    )
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(stateColor)
-                } else {
-                    Text(timeString)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(stateColor)
-                        .contentTransition(.numericText())
-                }
-
-                // Progress bar
-                ProgressView(value: progress)
-                    .progressViewStyle(LinearProgressViewStyle(tint: stateColor))
-                    .frame(width: 100, height: 3)
-
-                // Control buttons
-                HStack(spacing: 8) {
-                    // Play/Pause button
-                    Button {
-                        // Handled by system
-                    } label: {
-                        Image(
-                            systemName: context.state.pausedAt != nil ? "play.fill" : "pause.fill"
-                        )
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(stateColor)
-                        )
-                    }
-                    .buttonStyle(.plain)
-
-                    // Skip button
-                    Button {
-                        // Handled by system
-                    } label: {
-                        Image(systemName: "forward.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                Circle()
-                                    .fill(Color.secondary.opacity(0.8))
-                            )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-        )
-    }
-
-    private var sessionIcon: String {
-        if context.state.pausedAt != nil {
-            return "pause.fill"
-        }
-
-        return context.state.isBreak
-            ? (context.state.breakType == "long" ? "cup.and.saucer.fill" : "leaf.fill")
-            : "brain.head.profile"
-    }
-
-    private var sessionTitle: String {
-        if context.state.pausedAt != nil {
-            return "Paused"
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? "Long Break" : "Short Break"
-        }
-
-        return "Focus Session"
-    }
-
-    private var timeString: String {
-        let minutes = context.state.remainingTime / 60
-        let seconds = context.state.remainingTime % 60
-        return String(format: "%02d:%02d", minutes, seconds)
-    }
-
-    private var progress: Double {
-        let totalDuration = Double(context.state.duration)
-        let elapsedTime = Double(context.state.duration - context.state.remainingTime)
-        return max(0.0, min(1.0, elapsedTime / totalDuration))
-    }
-
-    private var stateColor: Color {
-        if context.state.pausedAt != nil {
-            return .orange
-        }
-
-        if context.state.isBreak {
-            return context.state.breakType == "long" ? .blue : .green
-        }
-
-        return .red
-    }
-}
-
-// MARK: - Preview Content
-extension PolmodorLiveActivityAttributes {
-    fileprivate static var preview: PolmodorLiveActivityAttributes {
-        PolmodorLiveActivityAttributes(name: "Polmodor Timer")
-    }
-}
-
-extension PolmodorLiveActivityAttributes.ContentState {
-    fileprivate static var work: PolmodorLiveActivityAttributes.ContentState {
-        PolmodorLiveActivityAttributes.ContentState(
-            taskTitle: "Complete Project Documentation",
-            remainingTime: 1500,
-            isBreak: false,
-            breakType: "none",
-            startedAt: Date(),
-            pausedAt: nil,
-            duration: 1500
-        )
-    }
-
-    fileprivate static var shortBreak: PolmodorLiveActivityAttributes.ContentState {
-        PolmodorLiveActivityAttributes.ContentState(
-            taskTitle: "Short Break",
-            remainingTime: 300,
-            isBreak: true,
-            breakType: "short",
-            startedAt: Date(),
-            pausedAt: nil,
-            duration: 300
-        )
-    }
-
-    fileprivate static var longBreak: PolmodorLiveActivityAttributes.ContentState {
-        PolmodorLiveActivityAttributes.ContentState(
-            taskTitle: "Long Break",
-            remainingTime: 900,
-            isBreak: true,
-            breakType: "long",
-            startedAt: Date(),
-            pausedAt: nil,
-            duration: 900
-        )
-    }
-
-    fileprivate static var paused: PolmodorLiveActivityAttributes.ContentState {
-        PolmodorLiveActivityAttributes.ContentState(
-            taskTitle: "Paused Session",
-            remainingTime: 1200,
-            isBreak: false,
-            breakType: "none",
-            startedAt: Date().addingTimeInterval(-300),  // Started 5 minutes ago
-            pausedAt: Date(),
-            duration: 1500
-        )
-    }
-}
-
-#Preview("Notification", as: .content, using: PolmodorLiveActivityAttributes.preview) {
-    PolmodorWidgetLiveActivity()
-} contentStates: {
-    PolmodorLiveActivityAttributes.ContentState.work
-    PolmodorLiveActivityAttributes.ContentState.shortBreak
-    PolmodorLiveActivityAttributes.ContentState.longBreak
-    PolmodorLiveActivityAttributes.ContentState.paused
 }

@@ -79,6 +79,9 @@ final class TimerViewModel: ObservableObject {
     // MARK: - Initialization
     init() {
         self.timeRemaining = PomodoroState.work.duration
+
+        // Setup notification observers for App Intents
+        setupNotificationObservers()
     }
 
     // Initialize with ModelContainer
@@ -200,17 +203,24 @@ final class TimerViewModel: ObservableObject {
         }
 
         do {
+            // Convert state to SessionType for Live Activity
+            let sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType
+            switch state {
+            case .work:
+                sessionType = .work
+            case .shortBreak:
+                sessionType = .shortBreak
+            case .longBreak:
+                sessionType = .longBreak
+            }
+
             LiveActivityManager.shared.startLiveActivity(
                 taskTitle: taskTitle,
                 remainingTime: remainingTimeSeconds,
-                isBreak: state != .work,
-                breakType: breakType,
+                sessionType: sessionType,
                 startedAt: isRunning ? Date() : nil,
                 pausedAt: isRunning ? nil : Date(),
                 duration: duration,
-                parentTaskName: parentTaskName,
-                completedPomodoros: completedPomodoros,
-                totalPomodoros: totalPomodoros,
                 isLocked: false
             )
         } catch {
@@ -269,8 +279,8 @@ final class TimerViewModel: ObservableObject {
         // If we have an active subtask, update its parent task's status
         updateActiveTaskStatus(isRunning: true)
 
-        // Start or update Live Activity
-        updateLiveActivity()
+        // Create or update Live Activity based on current timer state
+        updateLiveActivity()  // This will create a new one or update existing
     }
 
     func pauseTimer() {
@@ -283,8 +293,15 @@ final class TimerViewModel: ObservableObject {
         // Save timer state when paused
         saveTimerState()
 
-        // Update Live Activity to show paused state
-        updateLiveActivityState()
+        // Timer tamamen durduğunda Live Activity'yi de kapat
+        if timeRemaining <= 0 {
+            print("Timer completed, ending Live Activity")
+            // Live Activity'yi kapat
+            endLiveActivity()
+        } else {
+            // Timer sadece duraklatıldıysa Live Activity'yi güncelle
+            updateLiveActivityState()
+        }
     }
 
     func resetTimer() {
@@ -297,8 +314,13 @@ final class TimerViewModel: ObservableObject {
         // Save state after reset
         saveTimerState()
 
-        // End the current Live Activity
+        // Resetleme durumunda her zaman mevcut Live Activity'yi kapat
         endLiveActivity()
+
+        // Kısa bir gecikme ekleyerek yeni Live Activity oluşumuna hazırlan
+        Task {
+            try? await Task.sleep(for: .seconds(0.5))
+        }
     }
 
     func skipToNext() {
@@ -403,6 +425,10 @@ final class TimerViewModel: ObservableObject {
             ? SettingsManager.shared.shouldAutoStartBreaks
             : SettingsManager.shared.shouldAutoStartPomodoros
 
+        // Explicitly end the Live Activity before state transition
+        // This ensures the widget is properly dismissed when the timer completes
+        endLiveActivity()
+
         skipToNext()
 
         if shouldAutoStart {
@@ -424,9 +450,6 @@ final class TimerViewModel: ObservableObject {
                 message: message
             )
         }
-
-        // End Live Activity when timer completes
-        endLiveActivity()
     }
 
     // Increment the pomodoro count for a subtask
@@ -498,6 +521,66 @@ final class TimerViewModel: ObservableObject {
             }
         } catch {
             print("Error updating task status: \(error)")
+        }
+    }
+
+    // MARK: - App Intent Notification Handlers
+    private func setupNotificationObservers() {
+        // Observer for starting the next session
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("StartNextPomodorSession"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.startNextSession()
+        }
+
+        // Observer for toggling the timer
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("TogglePomodorTimer"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.toggleTimer()
+        }
+
+        // Observer for skipping the timer
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("SkipPomodorTimer"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.skipToNext()
+        }
+
+        // Observer for toggling lock state
+        NotificationCenter.default.addObserver(
+            forName: Notification.Name("ToggleLockPomodorTimer"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.toggleLock()
+        }
+    }
+
+    // Function to toggle lock state - for Live Activity
+    func toggleLock() {
+        let isLockedNow = UserDefaults.standard.bool(forKey: "TimerLockState")
+        UserDefaults.standard.set(!isLockedNow, forKey: "TimerLockState")
+
+        // Update the Live Activity's lock state
+        LiveActivityManager.shared.toggleLockLiveActivity(isLocked: !isLockedNow)
+    }
+
+    // Function to start the next session - for Live Activity
+    func startNextSession() {
+        if timeRemaining <= 0 {
+            // If the timer has finished, start the next session type
+            skipToNext()
+            startTimer()
+        } else {
+            // Otherwise, just toggle the current timer
+            toggleTimer()
         }
     }
 }

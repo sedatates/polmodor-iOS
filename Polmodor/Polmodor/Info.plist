@@ -15,5 +15,10 @@
 			<string>processing</string>
 			<string>fetch</string>
 		</array>
+		<key>NSLiveActivityOptions</key>
+		<dict>
+			<key>MaximumAlertCount</key>
+			<integer>5</integer>
+		</dict>
 	</dict>
 </plist>

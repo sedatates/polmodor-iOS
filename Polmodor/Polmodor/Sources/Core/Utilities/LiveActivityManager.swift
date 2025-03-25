@@ -29,41 +29,105 @@ import SwiftUI
   func startLiveActivity(
     taskTitle: String,
     remainingTime: Int,
-    isBreak: Bool,
-    breakType: String,
+    sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType,
     startedAt: Date? = Date(),
     pausedAt: Date? = nil,
     duration: Int,
-    parentTaskName: String? = nil,
-    completedPomodoros: Int = 0,
-    totalPomodoros: Int = 0,
     isLocked: Bool = false
   ) {
     // Only start if the device supports Live Activities
-    guard isLiveActivitySupported else { return }
-
-    // If we already have an activity, end it
-    if activity != nil {
-      do {
-        endLiveActivity()
-      } catch {
-        print("Failed to end previous Live Activity: \(error.localizedDescription)")
-        // Önceki activity sonlandırılamazsa yeni bir tane başlatmayı deneyelim
-      }
+    guard isLiveActivitySupported else {
+      print("📱 Live Activities not supported on this device")
+      return
     }
 
-    // Create the initial content state
+    print("🟢 Starting or updating Live Activity for: \(taskTitle)")
+
+    // If we already have an activity, check if we need to recreate it or just update it
+    if let currentActivity = activity {
+      // Get the current state to check the session type
+      let currentState = currentActivity.content.state
+
+      // If the session type has changed, we should recreate the activity
+      // Otherwise, just update the existing one
+      if currentState.sessionType != sessionType {
+        print(
+          "🟢 Session type changed from \(currentState.sessionType) to \(sessionType), recreating Live Activity"
+        )
+
+        // End the existing activity before creating a new one
+        Task {
+          await currentActivity.end(nil, dismissalPolicy: .immediate)
+          try? await Task.sleep(for: .seconds(0.3))  // Give it time to fully end
+
+          // Create new activity after a short delay
+          await startNewLiveActivity(
+            taskTitle: taskTitle,
+            remainingTime: remainingTime,
+            sessionType: sessionType,
+            startedAt: startedAt,
+            pausedAt: pausedAt,
+            duration: duration,
+            isLocked: isLocked
+          )
+        }
+      } else {
+        // Just update the existing activity
+        print("🟢 Updating existing Live Activity with same session type: \(sessionType)")
+
+        let updatedState = PolmodorLiveActivityAttributes.ContentState(
+          taskTitle: taskTitle,
+          remainingTime: remainingTime,
+          sessionType: sessionType,
+          startedAt: startedAt,
+          pausedAt: pausedAt,
+          duration: duration,
+          isLocked: isLocked
+        )
+
+        Task {
+          await currentActivity.update(
+            ActivityContent(state: updatedState, staleDate: nil)
+          )
+        }
+      }
+      return
+    }
+
+    // No existing activity, create a new one
+    print("🟢 No existing activity, creating new Live Activity")
+    Task {
+      await startNewLiveActivity(
+        taskTitle: taskTitle,
+        remainingTime: remainingTime,
+        sessionType: sessionType,
+        startedAt: startedAt,
+        pausedAt: pausedAt,
+        duration: duration,
+        isLocked: isLocked
+      )
+    }
+  }
+
+  /// Yeni Live Activity başlatma işleminin asıl implementasyonu
+  @MainActor
+  private func startNewLiveActivity(
+    taskTitle: String,
+    remainingTime: Int,
+    sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType,
+    startedAt: Date?,
+    pausedAt: Date?,
+    duration: Int,
+    isLocked: Bool
+  ) async {
+    // Create the initial content state with adjusted values to ensure proper initial display
     let initialContentState = PolmodorLiveActivityAttributes.ContentState(
       taskTitle: taskTitle,
       remainingTime: remainingTime,
-      isBreak: isBreak,
-      breakType: breakType,
-      startedAt: startedAt,
+      sessionType: sessionType,
+      startedAt: pausedAt == nil ? Date() : nil,  // Only set startedAt if not paused
       pausedAt: pausedAt,
       duration: duration,
-      parentTaskName: parentTaskName,
-      completedPomodoros: completedPomodoros,
-      totalPomodoros: totalPomodoros,
       isLocked: isLocked
     )
 
@@ -73,16 +137,33 @@ import SwiftUI
     )
 
     do {
+      print(
+        "🟢 Creating Live Activity content with state: \(initialContentState.sessionType.rawValue)")
+
+      // 60 dakikalık staleDate ile aktiviteyi başlat (varsayılan 1 saat yerine 2 saat)
+      let staleDate =
+        Calendar.current.date(byAdding: .hour, value: 2, to: Date())
+        ?? Date().addingTimeInterval(7200)
+
       // Start the Live Activity
       activity = try Activity.request(
         attributes: activityAttributes,
-        content: .init(state: initialContentState, staleDate: nil),
+        content: .init(
+          state: initialContentState,
+          staleDate: staleDate),
         pushType: nil
       )
-      print("Started Live Activity: \(activity?.id ?? "unknown")")
+
+      print("🟢 Successfully started Live Activity: \(activity?.id ?? "unknown")")
+
+      // For troubleshooting, log active activities
+      if #available(iOS 16.1, *) {
+        for activity in Activity<PolmodorLiveActivityAttributes>.activities {
+          print("🟢 Currently active activity: \(activity.id)")
+        }
+      }
     } catch {
-      print("Error starting Live Activity: \(error.localizedDescription)")
-      // Başarısız olursa activity değişkenini nil yapalım ki tekrar deneyebilelim
+      print("❌ Error starting Live Activity: \(error.localizedDescription)")
       activity = nil
     }
   }
@@ -97,29 +178,34 @@ import SwiftUI
     startedAt: Date? = nil,
     pausedAt: Date? = nil,
     duration: Int? = nil,
-    parentTaskName: String? = nil,
-    completedPomodoros: Int? = nil,
-    totalPomodoros: Int? = nil,
-    isLocked: Bool? = nil
+    isLocked: Bool? = nil,
+    progress: Double? = nil
   ) {
     guard let currentActivity = activity else { return }
 
     // Get the current state
     let currentState = currentActivity.content.state
 
+    // Handle session type update if needed
+    var sessionType = currentState.sessionType
+    if let isBreak = isBreak, let breakType = breakType {
+      if isBreak {
+        sessionType = breakType == "long" ? .longBreak : .shortBreak
+      } else {
+        sessionType = .work
+      }
+    }
+
     // Create updated state with new values or current values if not provided
     let updatedState = PolmodorLiveActivityAttributes.ContentState(
       taskTitle: taskTitle ?? currentState.taskTitle,
       remainingTime: remainingTime ?? currentState.remainingTime,
-      isBreak: isBreak ?? currentState.isBreak,
-      breakType: breakType ?? currentState.breakType,
+      sessionType: sessionType,
       startedAt: startedAt ?? currentState.startedAt,
       pausedAt: pausedAt,  // We specifically want to handle nil case for pausedAt
       duration: duration ?? currentState.duration,
-      parentTaskName: parentTaskName ?? currentState.parentTaskName,
-      completedPomodoros: completedPomodoros ?? currentState.completedPomodoros,
-      totalPomodoros: totalPomodoros ?? currentState.totalPomodoros,
-      isLocked: isLocked ?? currentState.isLocked
+      isLocked: isLocked ?? currentState.isLocked,
+      progress: progress  // Pass through the explicit progress value if provided
     )
 
     // Update activity with the new state
@@ -130,20 +216,87 @@ import SwiftUI
     }
   }
 
+  /// Update only the timer state (convenience method for common updates)
+  @MainActor
+  func updateLiveActivity(
+    remainingTime: Int? = nil,
+    pausedAt: Date? = nil
+  ) {
+    updateLiveActivity(
+      remainingTime: remainingTime,
+      pausedAt: pausedAt,
+      progress: nil  // Don't provide explicit progress, let it be calculated
+    )
+  }
+
   /// End the current Live Activity
   @MainActor
   func endLiveActivity() {
-    guard let currentActivity = activity else { return }
+    print("🔴 Attempting to end all Live Activities...")
 
+    // Önce mevcut referanstaki aktiviteyi sonlandır
+    if let currentActivity = activity {
+      print("🔴 Ending specific Live Activity: \(currentActivity.id)")
+
+      Task {
+        // Immediate dismissal policy kullanarak Live Activity'yi ekrandan kaldır
+        await currentActivity.end(
+          ActivityContent(
+            state: currentActivity.content.state,
+            staleDate: Date()  // Hemen geçersiz kılmak için şimdiki zamanı kullan
+          ),
+          dismissalPolicy: .immediate
+        )
+
+        // Hata ayıklama mesajı
+        print("🔴 Ended specific Live Activity with ID: \(currentActivity.id)")
+
+        // Aktiviteyi nil yap ki yeni aktiviteler temiz başlayabilsin
+        activity = nil
+      }
+    } else {
+      print("🔴 No current activity reference found, will try to clean up any lingering activities")
+    }
+
+    // iOS 16.1+ cihazlar için tüm aktiviteleri temizle
+    cleanupAllActivities()
+  }
+
+  /// Tüm mevcut Live Activity'leri temizler
+  @MainActor
+  private func cleanupAllActivities() {
     Task {
-      await currentActivity.end(
-        ActivityContent(
-          state: currentActivity.content.state,
-          staleDate: nil
-        ),
-        dismissalPolicy: .immediate
-      )
-      activity = nil
+      if #available(iOS 16.1, *) {
+        print("🔴 Cleaning up ALL Live Activities")
+
+        // 1. İlk temizleme denemesi
+        for activity in Activity<PolmodorLiveActivityAttributes>.activities {
+          print("🔴 Found lingering activity: \(activity.id)")
+          await activity.end(nil, dismissalPolicy: .immediate)
+        }
+
+        // 2. Kısa bir bekleme ve ikinci temizleme denemesi
+        try? await Task.sleep(for: .seconds(0.3))
+        for activity in Activity<PolmodorLiveActivityAttributes>.activities {
+          print("🔴 Second attempt - terminating activity: \(activity.id)")
+          await activity.end(nil, dismissalPolicy: .immediate)
+        }
+
+        // 3. Son bir temizleme denemesi (özellikle inatçı aktiviteler için)
+        try? await Task.sleep(for: .seconds(0.3))
+        for activity in Activity<PolmodorLiveActivityAttributes>.activities {
+          print("🔴 Final cleanup - force terminating activity: \(activity.id)")
+
+          let forcedContent = ActivityContent(
+            state: activity.content.state,
+            staleDate: Date(timeIntervalSinceNow: -3600)  // 1 saat öncesi tarih ile geçersiz kıl
+          )
+
+          await activity.end(forcedContent, dismissalPolicy: .immediate)
+        }
+
+        print("🔴 Live Activity cleanup completed")
+      }
     }
   }
 
