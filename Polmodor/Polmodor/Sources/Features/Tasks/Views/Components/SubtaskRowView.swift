@@ -6,14 +6,10 @@
 //
 
 import Foundation
-// Gerekli modelleri import et
-@preconcurrency import Polmodor
 import SwiftData
 import SwiftUI
+import UIKit
 
-#if os(iOS)
-    import UIKit
-#endif
 
 // MARK: - Subtask Row View
 struct SubtaskRowView: View {

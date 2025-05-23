@@ -65,7 +65,7 @@ struct PolmodorWidgetLiveActivity: Widget {
                     )
                 )
                 .contentTransition(.numericText())
-                .style(.timer)
+                // Removed .style(.timer)
             }
             .keylineTint(
                 stateColor(
@@ -123,7 +123,7 @@ struct PolmodorWidgetLiveActivity: Widget {
 // MARK: - Dynamic Island Live Activity View
 struct DynamicIslandLiveActivityView: View {
     let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-    @Environment(\.dynamicIslandExpandedDisplaySize) private var expandedDisplaySize
+    @Environment(\.isExpanded) private var isExpanded
 
     private var isPaused: Bool {
         context.state.pausedAt != nil
@@ -167,14 +167,10 @@ struct DynamicIslandLiveActivityView: View {
     }
 
     var body: some View {
-        switch context.dynamicIslandExpandedDisplayState {
-        case .expanded:
+        if isExpanded {
             // Expanded view (tapped Dynamic Island)
             expandedView
-        case .minimal:
-            // Minimized view (compact pill or circular)
-            minimalView
-        default:
+        } else {
             // Default compact view
             compactView
         }
@@ -210,7 +206,7 @@ struct DynamicIslandLiveActivityView: View {
             .foregroundStyle(stateColor.gradient)
             .contentTransition(.numericText())
             .animation(.snappy, value: context.state.remainingTime)
-            .style(.timer)  // Timer style for animation
+            // Removed .style(.timer)
 
             // Control buttons
             HStack(spacing: 24) {
@@ -261,7 +257,7 @@ struct DynamicIslandLiveActivityView: View {
             .foregroundStyle(stateColor)
             .contentTransition(.numericText())
             .animation(.snappy, value: context.state.remainingTime)
-            .style(.timer)  // Timer style for animation
+            // Removed .style(.timer)
         }
         .padding(.horizontal, 8)
     }
@@ -277,7 +273,7 @@ struct DynamicIslandLiveActivityView: View {
         .foregroundStyle(stateColor)
         .contentTransition(.numericText())
         .animation(.snappy, value: context.state.remainingTime)
-        .style(.timer)
+        // Removed .style(.timer)
     }
 }
 
@@ -469,5 +465,17 @@ struct TimerCircle: View {
                 .rotationEffect(.degrees(-90))
                 .animation(.linear, value: progress)
         }
+    }
+}
+
+// MARK: - Environment Values Extension
+extension EnvironmentValues {
+    var isExpanded: Bool {
+        get { self[IsExpandedKey.self] }
+        set { self[IsExpandedKey.self] = newValue }
+    }
+    
+    private struct IsExpandedKey: EnvironmentKey {
+        static let defaultValue: Bool = false
     }
 }
