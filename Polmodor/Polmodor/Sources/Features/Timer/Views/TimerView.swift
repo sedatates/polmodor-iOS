@@ -1,378 +1,426 @@
-import Combine
-import Foundation
-import SwiftData
 import SwiftUI
-// Import our custom components
-import UserNotifications
+import SwiftData
 
-#if os(iOS)
-    import UIKit
-#endif
-
-private final class Storage: ObservableObject {
-    var cancellables = Set<AnyCancellable>()
-}
-
-// MARK: - Main Timer View
 struct TimerView: View {
-    @EnvironmentObject var viewModel: TimerViewModel
+    @StateObject private var timerViewModel = TimerViewModel()
     @Environment(\.modelContext) private var modelContext
-
-    // MARK: - State
-    @State private var showUnlockAlert = false
-    @State private var isLocked = false
-    @State private var dragAmount = CGSize.zero
-    @State private var isUnlocked = false
-    @GestureState private var isDragging = false
-    private let haptic = UIImpactFeedbackGenerator(style: .medium)
-
-    @StateObject private var storage = Storage()
-
-    @State private var activeSubtask: PolmodorSubTask?
-    @State private var parentTask: PolmodorTask?
-
+    
+    @Query(sort: [
+        SortDescriptor(\PolmodorTask.createdAt, order: .reverse)
+    ]) private var tasks: [PolmodorTask]
+    
+    @State private var showingTaskSelector = false
+    @State private var showingTaskForm = false
+    @State private var showingSettings = false
+    
+    private var activeTask: PolmodorTask? {
+        if let subtaskID = timerViewModel.activeSubtaskID {
+            return tasks.first { task in
+                task.subTasks.contains { $0.id == subtaskID }
+            }
+        }
+        return nil
+    }
+    
+    private var activeSubtask: PolmodorSubTask? {
+        if let subtaskID = timerViewModel.activeSubtaskID {
+            return tasks.flatMap(\.subTasks).first { $0.id == subtaskID }
+        }
+        return nil
+    }
+    
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                BackgroundGradientView(stateColor: viewModel.currentStateColor)
-
+            ScrollView {
                 VStack(spacing: 30) {
-                    // Active task display
-                    activeTaskView
-
-                    Spacer()
-
-                    TimerCircleView(
-                        progress: viewModel.progress,
-                        timeString: viewModel.timeString,
-                        stateTitle: viewModel.currentStateTitle,
-                        stateColor: viewModel.currentStateColor,
-                        geometry: geometry
-                    )
-
-                    TimerControlsView(
-                        viewModel: viewModel,
-                        isLocked: isLocked,
-                        showUnlockAlert: $showUnlockAlert
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-
-                    Spacer()
+                    headerSection
+                    
+                    timerSection
+                    
+                    controlsSection
+                    
+                    activeTaskSection
+                    
+                    quickActionsSection
+                    
+                    Spacer(minLength: 50)
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
             }
-            .onChange(of: isLocked) { oldValue, newValue in
-                handleLockStateChange(newValue)
-            }
-            .onChange(of: viewModel.isRunning) { oldValue, newValue in
-                handleTimerStateChange(newValue)
-            }
-            .onChange(of: viewModel.activeSubtaskID) { oldValue, newValue in
-                loadActiveSubtask()
-            }
-            .onReceive(
-                NotificationCenter.default.publisher(
-                    for: Notification.Name("ToggleLockPomodorTimer")
-                )
-            ) { _ in
-                // Handle lock toggle from Live Activity
-                withAnimation {
-                    isLocked.toggle()
-                }
-            }
-            .withFloatingTabBarPadding()
-        }
-        .alert("Unlock Timer Controls?", isPresented: $showUnlockAlert) {
-            UnlockAlertButtons(
-                viewModel: viewModel,
-                isLocked: $isLocked,
-                onUnlock: handleUnlock
-            )
-        } message: {
-            Text("Are you sure you want to interrupt your focus session?")
         }
         .onAppear {
-            setupInitialState()
-            viewModel.configure(with: modelContext)
-            loadActiveSubtask()
+            timerViewModel.configure(with: modelContext)
         }
-    }
-
-    // MARK: - Active Task View
-    private var activeTaskView: some View {
-        CurrentTaskView()
-            .padding(.top, 16)
-    }
-
-    // MARK: - Private Methods
-    private func setupInitialState() {
-        isLocked = viewModel.isRunning
-    }
-
-    private func handleUnlock() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            isLocked = false
-        }
-    }
-
-    private func handleLock() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            isLocked = true
-        }
-    }
-
-    private func handleLockStateChange(_ newValue: Bool) {
-        if newValue {
-            handleLock()
-
-            // Update Live Activity lock state
-            if viewModel.isRunning {
-                LiveActivityManager.shared.toggleLockLiveActivity(isLocked: true)
-            }
-
-            // Save lock state to UserDefaults for persistent storage
-            UserDefaults.standard.set(true, forKey: "TimerLockState")
-        } else {
-            handleUnlock()
-
-            // Update Live Activity lock state
-            if viewModel.isRunning {
-                LiveActivityManager.shared.toggleLockLiveActivity(isLocked: false)
-            }
-
-            // Save lock state to UserDefaults for persistent storage
-            UserDefaults.standard.set(false, forKey: "TimerLockState")
-        }
-    }
-
-    private func handleTimerStateChange(_ isRunning: Bool) {
-        if isRunning {
-            handleLock()
-        }
-    }
-
-    // Load the subtask and its parent task from the model context
-    private func loadActiveSubtask() {
-        guard let subtaskID = viewModel.activeSubtaskID else {
-            withAnimation(.spring(response: 0.3)) {
-                activeSubtask = nil
-                parentTask = nil
-            }
-            return
-        }
-
-        do {
-            // Fetch the subtask
-            let subtaskDescriptor = FetchDescriptor<PolmodorSubTask>(
-                predicate: #Predicate { subtask in
-                    subtask.id == subtaskID
-                }
+        .sheet(isPresented: $showingTaskSelector) {
+            TaskSelectorView(
+                selectedSubtaskID: $timerViewModel.activeSubtaskID,
+                tasks: tasks
             )
-
-            let results = try modelContext.fetch(subtaskDescriptor)
-            guard let subtask = results.first else {
-                withAnimation(.spring(response: 0.3)) {
-                    activeSubtask = nil
-                    parentTask = nil
+        }
+        .sheet(isPresented: $showingTaskForm) {
+            NavigationView {
+                TaskFormView { newTask in
+                    showingTaskForm = false
                 }
-                return
             }
-
-            // Find the parent task
-            let taskDescriptor = FetchDescriptor<PolmodorTask>(
-                predicate: #Predicate { task in
-                    task.subTasks.contains(where: { $0.id == subtaskID })
-                }
-            )
-
-            let taskResults = try modelContext.fetch(taskDescriptor)
-            let foundParentTask = taskResults.first
-
-            // Update state with animations
-            withAnimation(.spring(response: 0.3)) {
-                self.activeSubtask = subtask
-                self.parentTask = foundParentTask
-            }
-        } catch {
-            print("Error fetching active subtask: \(error)")
-            withAnimation(.spring(response: 0.3)) {
-                activeSubtask = nil
-                parentTask = nil
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationView {
+                SettingsView()
             }
         }
     }
-}
-
-// MARK: - Background Gradient View
-struct BackgroundGradientView: View {
-    let stateColor: Color
-
-    var body: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                stateColor.opacity(0.8),
-                stateColor.opacity(0.4),
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
-    }
-}
-
-// MARK: - Timer Circle View
-struct TimerCircleView: View {
-    let progress: Double
-    let timeString: String
-    let stateTitle: String
-    let stateColor: Color
-    let geometry: GeometryProxy
-
-    var body: some View {
-        ZStack {
-            // Background blur & material
-            Circle()
-                .fill(.ultraThinMaterial.opacity(0.2))
-                .overlay(
-                    Circle().strokeBorder(stateColor.opacity(0.1), lineWidth: 1)
-                )
-
-            // Background track
-            Circle()
-                .stroke(stateColor.opacity(0.15), lineWidth: 20)
-                .shadow(color: stateColor.opacity(0.05), radius: 10, x: 0, y: 5)
-
-            // Progress track
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    stateColor,
-                    style: StrokeStyle(lineWidth: 20, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .shadow(color: stateColor.opacity(0.2), radius: 4, x: 0, y: 2)
-
-            // Timer text
-            VStack(spacing: 8) {
-                Text(timeString)
-                    .font(.custom("Bungee-Regular", size: 60))
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-
-                Text(stateTitle)
+    
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Polmodor Timer")
+                    .font(.title2.weight(.bold))
+                    .foregroundColor(.primary)
+                
+                Text(statusText)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Button {
+                showingSettings = true
+            } label: {
+                Image(systemName: "gearshape.fill")
                     .font(.title2)
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.secondary)
             }
         }
-        .frame(
-            width: min(geometry.size.width * 0.8, 300),
-            height: min(geometry.size.width * 0.8, 300)
-        )
-        .padding()
     }
-}
-
-// MARK: - Timer Controls View
-struct TimerControlsView: View {
-    @ObservedObject var viewModel: TimerViewModel
-    let isLocked: Bool
-    @Binding var showUnlockAlert: Bool
-
-    var body: some View {
-        HStack(spacing: 32) {
-            ControlButton(
-                action: { viewModel.resetTimer() },
-                systemImage: "arrow.counterclockwise",
-                disabled: false
-            )
-
-            PlayPauseButton(
-                viewModel: viewModel,
-                showUnlockAlert: $showUnlockAlert
-            )
-
-            ControlButton(
-                action: { viewModel.skipToNext() },
-                systemImage: "forward.fill",
-                disabled: false
-            )
+    
+    private var statusText: String {
+        if timerViewModel.isRunning {
+            return "Focus Timer Active"
+        } else if timerViewModel.timeRemaining < timerViewModel.state.duration {
+            return "Timer Paused"
+        } else {
+            return "Ready to Focus"
         }
-        .padding(.bottom, 40)
-        .transition(.move(edge: .bottom))
+    }
+    
+    private var timerSection: some View {
+        TimerCircleView(
+            progress: timerViewModel.progress,
+            timeRemaining: timerViewModel.timeRemaining,
+            totalTime: timerViewModel.state.duration,
+            isRunning: timerViewModel.isRunning,
+            pomodoroState: timerViewModel.state
+        )
+        .accessibility(label: Text(timerViewModel.accessibilityLabel))
+        .accessibility(value: Text(timerViewModel.accessibilityValue))
+        .accessibility(hint: Text(timerViewModel.accessibilityHint))
+    }
+    
+    private var controlsSection: some View {
+        HStack(spacing: 20) {
+            resetButton
+            
+            Spacer()
+            
+            playPauseButton
+            
+            Spacer()
+            
+            skipButton
+        }
+        .padding(.horizontal, 20)
+    }
+    
+    private var playPauseButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                timerViewModel.toggleTimer()
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(timerViewModel.currentStateColor)
+                    .frame(width: 80, height: 80)
+                    .shadow(color: timerViewModel.currentStateColor.opacity(0.3), radius: 8, x: 0, y: 4)
+                
+                Image(systemName: timerViewModel.isRunning ? "pause.fill" : "play.fill")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundColor(.white)
+                    .offset(x: timerViewModel.isRunning ? 0 : 2)
+            }
+        }
+        .scaleEffect(timerViewModel.isRunning ? 1.0 : 0.95)
+        .animation(.easeInOut(duration: 0.2), value: timerViewModel.isRunning)
+        .accessibilityLabel(timerViewModel.isRunning ? "Pause Timer" : "Start Timer")
+    }
+    
+    private var resetButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                timerViewModel.resetTimer()
+            }
+        } label: {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 50, height: 50)
+                .background(
+                    Circle()
+                        .fill(Color(.systemGray6))
+                )
+        }
+        .disabled(timerViewModel.timeRemaining >= timerViewModel.state.duration && !timerViewModel.isRunning)
+        .opacity(timerViewModel.timeRemaining >= timerViewModel.state.duration && !timerViewModel.isRunning ? 0.5 : 1.0)
+        .accessibilityLabel("Reset Timer")
+    }
+    
+    private var skipButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                timerViewModel.skipToNext()
+            }
+        } label: {
+            Image(systemName: "forward.end.fill")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(width: 50, height: 50)
+                .background(
+                    Circle()
+                        .fill(Color(.systemGray6))
+                )
+        }
+        .accessibilityLabel("Skip to Next Session")
+    }
+    
+    private var activeTaskSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Active Task")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Button {
+                    showingTaskSelector = true
+                } label: {
+                    Text(timerViewModel.activeSubtaskID == nil ? "Select Task" : "Change Task")
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(timerViewModel.currentStateColor)
+                }
+            }
+            
+            if let task = activeTask, let subtask = activeSubtask {
+                ActiveTaskCard(task: task, subtask: subtask)
+            } else {
+                EmptyTaskCard()
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+    
+    private var quickActionsSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("Quick Actions")
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.primary)
+                
+                Spacer()
+            }
+            
+            HStack(spacing: 12) {
+                QuickActionButton(
+                    icon: "plus.circle.fill",
+                    title: "Add Task",
+                    color: .blue
+                ) {
+                    showingTaskForm = true
+                }
+                
+                QuickActionButton(
+                    icon: "list.bullet.clipboard",
+                    title: "All Tasks",
+                    color: .green
+                ) {
+                    showingTaskSelector = true
+                }
+                
+                QuickActionButton(
+                    icon: "chart.bar.fill",
+                    title: "Statistics",
+                    color: .orange
+                ) {
+                    // Navigate to statistics view
+                }
+            }
+        }
+        .padding(.horizontal, 4)
     }
 }
 
-// MARK: - Control Button
-struct ControlButton: View {
-    let action: () -> Void
-    let systemImage: String
-    let disabled: Bool
+struct ActiveTaskCard: View {
+    let task: PolmodorTask
+    let subtask: PolmodorSubTask
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(task.title)
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                    
+                    Text(subtask.title)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(subtask.pomodoro.completed)/\(subtask.pomodoro.total)")
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.primary)
+                    
+                    Text("Pomodoros")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            ProgressView(value: Double(subtask.pomodoro.completed), total: Double(subtask.pomodoro.total))
+                .tint(task.category?.color ?? .blue)
+                .scaleEffect(y: 1.5)
+            
+            HStack {
+                Label(task.category?.name ?? "General", systemImage: "tag.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(task.category?.color ?? .blue)
+                
+                Spacer()
+                
+                Label(task.priority.rawValue, systemImage: "exclamationmark.circle.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(task.priority.color)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+        )
+    }
+}
 
+struct EmptyTaskCard: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "timer.circle.fill")
+                .font(.system(size: 40))
+                .foregroundColor(.secondary.opacity(0.6))
+            
+            Text("No Active Task")
+                .font(.headline.weight(.medium))
+                .foregroundColor(.primary)
+            
+            Text("Select a task to start focusing with the Pomodoro technique")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemGray6))
+        )
+    }
+}
+
+struct QuickActionButton: View {
+    let icon: String
+    let title: String
+    let color: Color
+    let action: () -> Void
+    
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.title2)
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(.ultraThinMaterial.opacity(0.7))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
-        }
-        .disabled(disabled)
-        .opacity(disabled ? 0.5 : 1)
-    }
-}
-
-// MARK: - Play Pause Button
-struct PlayPauseButton: View {
-    @ObservedObject var viewModel: TimerViewModel
-    @Binding var showUnlockAlert: Bool
-
-    var body: some View {
-        Button(action: { viewModel.toggleTimer() }) {
-            Image(systemName: viewModel.isRunning ? "pause.fill" : "play.fill")
-                .font(.title)
-                .foregroundColor(viewModel.currentStateColor)
-                .frame(width: 72, height: 72)
-                .background(
-                    Circle()
-                        .fill(Color.white)
-                )
-                .overlay(
-                    Circle()
-                        .strokeBorder(viewModel.currentStateColor.opacity(0.2), lineWidth: 1)
-                )
-                .shadow(color: viewModel.currentStateColor.opacity(0.2), radius: 8, x: 0, y: 2)
+            VStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(color)
+                
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray6))
+            )
         }
     }
 }
 
-// MARK: - Unlock Alert Buttons
-struct UnlockAlertButtons: View {
-    @ObservedObject var viewModel: TimerViewModel
-    @Binding var isLocked: Bool
-    let onUnlock: () -> Void
-
+struct TaskSelectorView: View {
+    @Binding var selectedSubtaskID: UUID?
+    let tasks: [PolmodorTask]
+    @Environment(\.dismiss) private var dismiss
+    
     var body: some View {
-        Group {
-            Button("Cancel", role: .cancel) {}
-            Button("Unlock", role: .destructive) {
-                viewModel.pauseTimer()
-                withAnimation(.spring()) {
-                    isLocked = false
+        NavigationView {
+            List {
+                ForEach(tasks) { task in
+                    Section(task.title) {
+                        ForEach(task.subTasks) { subtask in
+                            Button {
+                                selectedSubtaskID = subtask.id
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(subtask.title)
+                                            .foregroundColor(.primary)
+                                        
+                                        Text("\(subtask.pomodoro.completed)/\(subtask.pomodoro.total) Pomodoros")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    if selectedSubtaskID == subtask.id {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Select Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
                 }
             }
         }
     }
 }
 
-// MARK: - Preview
 #Preview {
     TimerView()
-        .environmentObject(TimerViewModel())
+        .modelContainer(ModelContainerSetup.setupModelContainer())
 }

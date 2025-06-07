@@ -387,7 +387,7 @@ final class TimerViewModel: ObservableObject {
             return
         }
 
-        timeRemaining -= 1
+        timeRemaining -= 10
         progress = 1 - (timeRemaining / totalTime)
 
         // Save state periodically (e.g. every 15 seconds)

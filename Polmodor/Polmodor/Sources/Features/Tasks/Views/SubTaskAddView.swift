@@ -15,27 +15,26 @@ struct SubTaskAddView: View {
     @State private var pomodoroCount = 1
     @State private var showWarning = false
     @State private var shouldScrollToBottom = false
-
+    
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.themeManager) private var themeManager
-
+    
     private var backgroundColor: Color {
-        themeManager.isDarkMode ? Color(white: 0.15) : Color.white
+        Color.white
     }
-
+    
     private var accentColor: Color {
         task.category?.color ?? .blue
     }
-
+    
     // Validate if we should show a warning
     private var shouldShowWarning: Bool {
         pomodoroCount > 4
     }
-
+    
     // Maksimum pomodoro sayısı
     private let maxPomodoroCount = 10
-
+    
     var body: some View {
         NavigationStack {
             ScrollViewReader { scrollProxy in
@@ -46,19 +45,19 @@ struct SubTaskAddView: View {
                             Text("Task")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
-
+                            
                             HStack(spacing: 12) {
                                 ZStack {
                                     Circle()
                                         .fill(accentColor.opacity(0.15))
                                         .frame(width: 36, height: 36)
-
+                                    
                                     Image(systemName: task.iconName)
                                         .font(.system(size: 16, weight: .medium))
                                         .foregroundStyle(accentColor)
                                         .symbolRenderingMode(.hierarchical)
                                 }
-
+                                
                                 Text(task.title)
                                     .font(.headline)
                                     .lineLimit(2)
@@ -69,13 +68,13 @@ struct SubTaskAddView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .padding(.horizontal)
-
+                        
                         // Subtask input
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Subtask")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
-
+                            
                             TextField(
                                 "Please enter a subtask",
                                 text: $subtaskTitle
@@ -93,21 +92,21 @@ struct SubTaskAddView: View {
                             }
                         }
                         .padding(.horizontal)
-
+                        
                         // Pomodoro count selector
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Estimated Pomodoros")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.secondary)
-
+                            
                             VStack(spacing: 4) {
                                 HStack {
                                     Text("Pomodoros: \(pomodoroCount)")
                                         .font(.subheadline)
                                         .foregroundStyle(.primary)
-
+                                    
                                     Spacer()
-
+                                    
                                     HStack(spacing: 8) {
                                         Button(action: {
                                             if pomodoroCount > 1 {
@@ -119,15 +118,15 @@ struct SubTaskAddView: View {
                                                 .font(.system(size: 24))
                                                 .foregroundStyle(
                                                     pomodoroCount > 1
-                                                        ? accentColor : Color.secondary.opacity(0.3)
+                                                    ? accentColor : Color.secondary.opacity(0.3)
                                                 )
                                         }
-
+                                        
                                         Text("\(pomodoroCount)")
                                             .font(.headline)
                                             .monospacedDigit()
                                             .frame(minWidth: 28)
-
+                                        
                                         Button(action: {
                                             if pomodoroCount < maxPomodoroCount {
                                                 pomodoroCount += 1
@@ -138,12 +137,12 @@ struct SubTaskAddView: View {
                                                 .font(.system(size: 24))
                                                 .foregroundStyle(
                                                     pomodoroCount < maxPomodoroCount
-                                                        ? accentColor : Color.secondary.opacity(0.3)
+                                                    ? accentColor : Color.secondary.opacity(0.3)
                                                 )
                                         }
                                     }
                                 }
-
+                                
                                 Slider(
                                     value: Binding(
                                         get: { Double(pomodoroCount) },
@@ -162,12 +161,12 @@ struct SubTaskAddView: View {
                             .padding(.vertical, 14)
                             .background(Color.secondary.opacity(0.07))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-
+                            
                             if showWarning {
                                 HStack(alignment: .top, spacing: 8) {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .foregroundStyle(Color.orange)
-
+                                    
                                     Text(
                                         "Consider breaking this task into smaller parts for better focus and progress tracking."
                                     )
@@ -177,7 +176,7 @@ struct SubTaskAddView: View {
                                 .padding(.horizontal, 6)
                                 .transition(.opacity.combined(with: .scale(scale: 0.95)))
                             }
-
+                            
                             // Maximum pomodoro sayısını gösteren bilgi metni
                             Text("Maximum \(maxPomodoroCount) pomodoros per subtask")
                                 .font(.caption)
@@ -186,9 +185,9 @@ struct SubTaskAddView: View {
                         }
                         .padding(.horizontal)
                         .animation(.easeInOut(duration: 0.2), value: showWarning)
-
+                        
                         Spacer(minLength: 20)
-
+                        
                         Button("Add Subtask") {
                             addSubtask()
                         }
@@ -201,7 +200,7 @@ struct SubTaskAddView: View {
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(
                                     subtaskTitle.isEmpty
-                                        ? Color.secondary.opacity(0.3) : accentColor)
+                                    ? Color.secondary.opacity(0.3) : accentColor)
                         )
                         .padding(.horizontal)
                         .padding(.bottom, 8)
@@ -235,13 +234,12 @@ struct SubTaskAddView: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .withAppTheme()
         .onAppear {
             // Check if we should show a warning based on initial value
             showWarning = shouldShowWarning
         }
     }
-
+    
     private func addSubtask() {
         // Only add if title is not empty
         if !subtaskTitle.isEmpty {
@@ -250,18 +248,18 @@ struct SubTaskAddView: View {
                 title: subtaskTitle,
                 pomodoro: .init(total: pomodoroCount, completed: 0)
             )
-
+            
             // Add the subtask to the parent task
             task.subTasks.append(subtask)
-
+            
             // Make sure the model context is updated
             // This ensures changes are persisted and UI updates
             modelContext.insert(subtask)
-
+            
             // Clear the input field
             subtaskTitle = ""
         }
-
+        
         // Dismiss the sheet
         dismiss()
     }
@@ -271,12 +269,12 @@ struct SubTaskAddView: View {
 #Preview {
     // Create a mock environment for the preview
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-
+    
     do {
         let container = try ModelContainer(for: PolmodorTask.self, configurations: config)
         let task = PolmodorTask.mockTasks[0]
         container.mainContext.insert(task)
-
+        
         return SubTaskAddView(task: task)
             .modelContainer(container)
     } catch {

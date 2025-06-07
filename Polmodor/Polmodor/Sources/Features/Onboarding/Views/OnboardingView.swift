@@ -1,13 +1,13 @@
 import SwiftUI
 
 #if os(iOS)
-    import UIKit
+import UIKit
 #endif
 
 struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @State private var currentPage = 0
-
+    
     private let pages = [
         OnboardingPage(
             title: "Welcome to Polmodor",
@@ -38,7 +38,7 @@ struct OnboardingView: View {
             gradientColors: [Color(hex: "FF922B"), Color(hex: "D9480F")]
         ),
     ]
-
+    
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -47,17 +47,16 @@ struct OnboardingView: View {
                     currentPage: currentPage,
                     pageCount: pages.count
                 )
-
+                
                 TabView(selection: $currentPage) {
                     ForEach(pages.indices, id: \.self) { index in
                         OnboardingPageView(page: pages[index])
                             .tag(index)
                     }
                 }
-                #if os(iOS)
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-                #endif
-
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                
+                
                 if currentPage != pages.count - 1 {
                     PaginationDotsView(
                         currentPage: currentPage,
@@ -65,22 +64,21 @@ struct OnboardingView: View {
                         safeAreaBottom: geometry.safeAreaInsets.bottom
                     )
                 }
-
+                
                 if currentPage == pages.count - 1 {
                     VStack(spacing: 0) {
                         Spacer()
-
+                        
                         VStack(spacing: 24) {
                             Text("Ready to boost your productivity?")
                                 .font(.title3)
                                 .fontWeight(.semibold)
                                 .foregroundColor(.white)
                                 .multilineTextAlignment(.center)
-
+                            
                             Button {
-                                withAnimation {
-                                    hasCompletedOnboarding = true
-                                }
+                                hasCompletedOnboarding = true
+                                
                             } label: {
                                 Text("Get Started")
                                     .font(.title3)
@@ -133,28 +131,28 @@ struct OnboardingPage {
 
 struct OnboardingPageView: View {
     let page: OnboardingPage
-
+    
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
-
+            
             Image(systemName: page.imageName)
                 .font(.system(size: 100))
                 .foregroundColor(.white)
-
+            
             VStack(spacing: 12) {
                 Text(page.title)
                     .font(.title.bold())
                     .multilineTextAlignment(.center)
                     .foregroundColor(.white)
-
+                
                 Text(page.description)
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(.white.opacity(0.8))
             }
             .padding(.horizontal, 32)
-
+            
             Spacer()
             Spacer()
         }
@@ -165,12 +163,12 @@ struct AnimatedGradientBackground: View {
     let colors: [[Color]]
     let currentPage: Int
     let pageCount: Int
-
+    
     var body: some View {
         GeometryReader { geometry in
             let progress = CGFloat(currentPage)
             let nextPage = min(currentPage + 1, pageCount - 1)
-
+            
             LinearGradient(
                 colors: blendGradients(
                     colors[currentPage],
@@ -183,32 +181,32 @@ struct AnimatedGradientBackground: View {
         }
         .animation(.easeInOut, value: currentPage)
     }
-
+    
     private func blendGradients(_ gradient1: [Color], _ gradient2: [Color], progress: CGFloat)
-        -> [Color]
+    -> [Color]
     {
         guard progress > 0 else { return gradient1 }
         return zip(gradient1, gradient2).map { color1, color2 in
             blend(from: color1, to: color2, progress: progress)
         }
     }
-
+    
     private func blend(from: Color, to: Color, progress: Double) -> Color {
         let p = max(0, min(1, progress))
-
-        #if os(iOS)
-            let fromComponents = UIColor(from).cgColor.components ?? [0, 0, 0, 1]
-            let toComponents = UIColor(to).cgColor.components ?? [0, 0, 0, 1]
-
-            let r = fromComponents[0] + (toComponents[0] - fromComponents[0]) * p
-            let g = fromComponents[1] + (toComponents[1] - fromComponents[1]) * p
-            let b = fromComponents[2] + (toComponents[2] - fromComponents[2]) * p
-            let a = fromComponents[3] + (toComponents[3] - fromComponents[3]) * p
-
-            return Color(uiColor: UIColor(red: r, green: g, blue: b, alpha: a))
-        #else
-            return from
-        #endif
+        
+#if os(iOS)
+        let fromComponents = UIColor(from).cgColor.components ?? [0, 0, 0, 1]
+        let toComponents = UIColor(to).cgColor.components ?? [0, 0, 0, 1]
+        
+        let r = fromComponents[0] + (toComponents[0] - fromComponents[0]) * p
+        let g = fromComponents[1] + (toComponents[1] - fromComponents[1]) * p
+        let b = fromComponents[2] + (toComponents[2] - fromComponents[2]) * p
+        let a = fromComponents[3] + (toComponents[3] - fromComponents[3]) * p
+        
+        return Color(uiColor: UIColor(red: r, green: g, blue: b, alpha: a))
+#else
+        return from
+#endif
     }
 }
 
@@ -216,11 +214,11 @@ struct PaginationDotsView: View {
     let currentPage: Int
     let pageCount: Int
     let safeAreaBottom: CGFloat
-
+    
     var body: some View {
         VStack {
             Spacer()
-
+            
             Capsule()
                 .fill(.ultraThinMaterial)
                 .frame(width: CGFloat(pageCount * 16 + 24), height: 40)

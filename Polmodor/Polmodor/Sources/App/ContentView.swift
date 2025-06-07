@@ -4,7 +4,9 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var timerViewModel: TimerViewModel
+    @Query private var settingsModels: [SettingsModel]
     @AppStorage("selectedTab") private var selectedTab: Int = 0
+    
     
     private var currentTab: Tab {
         switch selectedTab {
@@ -49,8 +51,6 @@ struct ContentView: View {
                 .tag(Tab.settings)
             }
             .toolbarBackground(.hidden, for: .tabBar)
-            
-            
             .safeAreaInset(edge: .bottom) {
                 ModernTabBar(
                     selectedTab: Binding(
@@ -62,7 +62,9 @@ struct ContentView: View {
                 .padding(.bottom, 8)
             }
         }
-        .withAppTheme()
+        .preferredColorScheme(
+            settingsModels.first?.isDarkModeEnabled == true ? .dark : .light
+        )
     }
 }
 
@@ -70,7 +72,6 @@ struct ModernTabBar: View {
     @Binding var selectedTab: ContentView.Tab
     @Namespace private var animation
     @Environment(\.colorScheme) private var colorScheme
-    private let themeManager = ThemeManager.shared
     
     var body: some View {
         HStack {
@@ -81,13 +82,11 @@ struct ModernTabBar: View {
         .padding(8)
         .background {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                
-                .fill(themeManager.isDarkMode ? .ultraThinMaterial : .ultraThick)
-                .fill(themeManager.isDarkMode ? Color.black.opacity(0.2) : .white)
+                .fill(colorScheme == .dark ? .ultraThinMaterial : .ultraThick)
+                .fill(colorScheme == .dark ? Color.black.opacity(0.2) : .white)
                 .shadow(
-                    color: themeManager.isDarkMode ? .black.opacity(0.15) : .black.opacity(0.05),
+                    color: colorScheme == .dark ? .black.opacity(0.15) : .black.opacity(0.05),
                     radius: 15, x: 0, y: 5)
-                .opacity(selectedTab == .timer ? 0.2 : 1)
         }
     }
 }
@@ -96,8 +95,7 @@ struct TabButton: View {
     let tab: ContentView.Tab
     @Binding var selectedTab: ContentView.Tab
     var namespace: Namespace.ID
-    @Environment(\.colorScheme) private var colorScheme
-    private let themeManager = ThemeManager.shared
+    
     
     var body: some View {
         Button {
@@ -111,7 +109,7 @@ struct TabButton: View {
                     .foregroundStyle(
                         selectedTab == tab
                         ? tab.color
-                        : themeManager.isDarkMode ? .gray.opacity(0.7) : .gray.opacity(0.9)
+                        :  .gray.opacity(0.9)
                     )
                     .symbolEffect(.bounce, value: selectedTab == tab)
                 
@@ -120,7 +118,7 @@ struct TabButton: View {
                     .foregroundStyle(
                         selectedTab == tab
                         ? tab.color
-                        : themeManager.isDarkMode ? .gray.opacity(0.7) : .gray.opacity(0.5))
+                        : .gray.opacity(0.5))
                 
             }
             .frame(height: 55)

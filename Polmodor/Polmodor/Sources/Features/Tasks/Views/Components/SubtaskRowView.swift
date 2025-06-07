@@ -74,10 +74,12 @@ struct SubtaskRowView: View {
                 }
             }) {
                 HStack(spacing: 4) {
+                    if isActiveSubtask {
+                        Text("Current Task")
+                            .font(.caption.bold())
+                    }
                     Image(systemName: isActiveSubtask ? "checkmark.circle.fill" : "circle")
                         .symbolRenderingMode(.hierarchical)
-                    Text(isActiveSubtask ? "Active" : "Set Active")
-                        .font(.caption.bold())
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)

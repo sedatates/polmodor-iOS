@@ -5,10 +5,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var settingsModels: [SettingsModel]
-
-    // ThemeManager referansı
-    @Environment(\.themeManager) private var themeManager
-
+    
     // Aktif ayarlar
     private var settings: SettingsModel {
         // Eğer hiç ayar yoksa, yeni bir tane oluştur
@@ -20,7 +17,7 @@ struct SettingsView: View {
             return newSettings
         }
     }
-
+    
     var body: some View {
         List {
             Group {
@@ -38,7 +35,7 @@ struct SettingsView: View {
                         step: 5
                     )
                     .padding(.vertical, 4)
-
+                    
                     Stepper(
                         "Short Break: \(settings.shortBreakDuration) minutes",
                         value: Binding(
@@ -52,7 +49,7 @@ struct SettingsView: View {
                         step: 5
                     )
                     .padding(.vertical, 4)
-
+                    
                     Stepper(
                         "Long Break: \(settings.longBreakDuration) minutes",
                         value: Binding(
@@ -66,7 +63,7 @@ struct SettingsView: View {
                         step: 5
                     )
                     .padding(.vertical, 4)
-
+                    
                     Stepper(
                         "Pomodoros Until Long Break: \(settings.pomodorosUntilLongBreak)",
                         value: Binding(
@@ -81,7 +78,7 @@ struct SettingsView: View {
                     )
                     .padding(.vertical, 4)
                 }
-
+                
                 Section("Automation") {
                     Toggle(
                         "Auto-start Breaks",
@@ -94,7 +91,7 @@ struct SettingsView: View {
                         )
                     )
                     .padding(.vertical, 2)
-
+                    
                     Toggle(
                         "Auto-start Pomodoros",
                         isOn: Binding(
@@ -107,7 +104,7 @@ struct SettingsView: View {
                     )
                     .padding(.vertical, 2)
                 }
-
+                
                 Section("Notifications") {
                     Toggle(
                         "Show Notifications",
@@ -120,7 +117,7 @@ struct SettingsView: View {
                         )
                     )
                     .padding(.vertical, 2)
-
+                    
                     Toggle(
                         "Play Sound",
                         isOn: Binding(
@@ -133,7 +130,7 @@ struct SettingsView: View {
                     )
                     .padding(.vertical, 2)
                 }
-
+                
                 Section("Appearance") {
                     Toggle(
                         "Dark Mode",
@@ -141,20 +138,19 @@ struct SettingsView: View {
                             get: { settings.isDarkModeEnabled },
                             set: { newValue in
                                 settings.isDarkModeEnabled = newValue
-                                themeManager.setDarkMode(newValue)
                                 try? modelContext.save()
                             }
                         )
                     )
                     .padding(.vertical, 2)
                 }
-
+                
                 Section {
                     Link(destination: URL(string: "app-settings://")!) {
                         Label("Notification Settings", systemImage: "bell.badge")
                     }
                     .padding(.vertical, 2)
-
+                    
                     Link(
                         destination: URL(string: "https://github.com/yourusername/polmodor/issues")!
                     ) {
@@ -162,7 +158,7 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 2)
                 }
-
+                
                 Section {
                     NavigationLink(
                         destination: AboutView(),
@@ -170,13 +166,11 @@ struct SettingsView: View {
                             Label("About Polmodor", systemImage: "info.circle")
                         }
                     )
-                    .padding(.vertical, 2)
                 }
-
+                
                 Section {
                     Button("Reset to Defaults") {
                         settings.resetToDefaults()
-                        themeManager.setDarkMode(settings.isDarkModeEnabled)
                         try? modelContext.save()
                     }
                     .padding(.vertical, 2)
@@ -187,10 +181,6 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .safeAreaInset(edge: .bottom) {
             Color.clear.frame(height: 100)
-        }
-        .onAppear {
-            // Tema yöneticisini güncelle
-            themeManager.setDarkMode(settings.isDarkModeEnabled)
         }
     }
 }
@@ -204,10 +194,10 @@ struct AboutView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(height: 100)
-
+                    
                     Text("Polmodor")
                         .font(.title.bold())
-
+                    
                     Text("Version 1.0.0 (1)")
                         .foregroundStyle(.secondary)
                 }
@@ -216,14 +206,14 @@ struct AboutView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
-
+            
             Section("About") {
                 Text(
                     "Polmodor is a Pomodoro Timer app designed to help you stay focused and productive. It's simple, elegant, and easy to use."
                 )
                 .padding(.vertical, 8)
             }
-
+            
             Section {
                 Link(
                     destination: URL(
@@ -232,7 +222,7 @@ struct AboutView: View {
                     Label("Privacy Policy", systemImage: "hand.raised")
                 }
                 .padding(.vertical, 2)
-
+                
                 Link(
                     destination: URL(
                         string: "https://github.com/yourusername/polmodor/blob/main/LICENSE")!
@@ -241,7 +231,7 @@ struct AboutView: View {
                 }
                 .padding(.vertical, 2)
             }
-
+            
             Section {
                 Text("© \(Image(systemName: "heart.text.square")) Sedat Ates")
                     .foregroundStyle(.secondary)
@@ -261,5 +251,6 @@ struct AboutView: View {
     NavigationStack {
         SettingsView()
             .modelContainer(for: SettingsModel.self)
+        
     }
 }
