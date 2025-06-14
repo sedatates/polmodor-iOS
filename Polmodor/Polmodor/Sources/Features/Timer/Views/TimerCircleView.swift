@@ -10,8 +10,8 @@ struct TimerCircleView: View {
     @State private var rotationAngle: Double = 0
     @State private var previousProgress: Double = 0
     
-    private let circleRadius: CGFloat = 140
-    private let numberRadius: CGFloat = 160
+    private let numberRadius: CGFloat = UIScreen.screenWidth / 2
+    private let circleWidth: CGFloat = UIScreen.screenWidth
     
     private var stateColor: Color {
         switch pomodoroState {
@@ -37,21 +37,19 @@ struct TimerCircleView: View {
     }
     
     private var currentRotation: Double {
-        let progressAngle = progress * 360
-        return -progressAngle
+        let progressAngle = progress * 1500
+        return progressAngle
     }
     
     var body: some View {
         ZStack {
-            backgroundCircle
-            
-            progressCircle
-            
             timeNumbersCircle
-            
             centerTimeDisplay
         }
-        .frame(width: numberRadius * 2 + 40, height: numberRadius * 2 + 40)
+        .frame(
+            width: circleWidth,
+            height: circleWidth
+        )
         .onChange(of: progress) { oldValue, newValue in
             withAnimation(.easeInOut(duration: 0.5)) {
                 rotationAngle = currentRotation
@@ -69,30 +67,7 @@ struct TimerCircleView: View {
         }
     }
     
-    private var backgroundCircle: some View {
-        Circle()
-            .stroke(
-                stateColor.opacity(0.2),
-                style: StrokeStyle(lineWidth: 8, lineCap: .round)
-            )
-            .frame(width: circleRadius * 2, height: circleRadius * 2)
-    }
     
-    private var progressCircle: some View {
-        Circle()
-            .trim(from: 0, to: progress)
-            .stroke(
-                LinearGradient(
-                    colors: [stateColor.opacity(0.8), stateColor],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                style: StrokeStyle(lineWidth: 8, lineCap: .round)
-            )
-            .frame(width: circleRadius * 2, height: circleRadius * 2)
-            .rotationEffect(.degrees(-90))
-            .animation(.easeInOut(duration: 0.3), value: progress)
-    }
     
     private var timeNumbersCircle: some View {
         ZStack {
@@ -110,11 +85,12 @@ struct TimerCircleView: View {
         }
         .rotationEffect(.degrees(rotationAngle))
         .animation(.easeInOut(duration: 1.0), value: rotationAngle)
+        .position(x: circleWidth / 2, y: -circleWidth / 4)
     }
     
     private func timeNumberView(number: String, angle: Double, isStart: Bool, isActive: Bool) -> some View {
-        let x = cos((angle - 90) * .pi / 180) * numberRadius
-        let y = sin((angle - 90) * .pi / 180) * numberRadius
+        let x = cos((angle) * .pi / 180) * circleWidth
+        let y = sin((angle) * .pi / 180) * circleWidth
         
         return Text(number)
             .font(isStart ? .caption.weight(.bold) : .system(size: 16, weight: .medium))
@@ -122,9 +98,9 @@ struct TimerCircleView: View {
             .background(
                 Circle()
                     .fill(isActive ? stateColor.opacity(0.2) : Color.clear)
-                    .frame(width: isStart ? 50 : 30, height: isStart ? 20 : 30)
+                    .frame(width: isStart ? 50 : 0, height: isStart ? 10 : 0)
             )
-            .scaleEffect(isActive ? 1.2 : 1.0)
+            .scaleEffect(isActive ? 1.5 : 1.0)
             .rotationEffect(.degrees(-rotationAngle))
             .animation(.easeInOut(duration: 0.3), value: isActive)
             .animation(.easeInOut(duration: 1.0), value: rotationAngle)
@@ -183,12 +159,12 @@ struct TimerCircleView: View {
 
 #Preview {
     TimerCircleView(
-        progress: 0.3,
-        timeRemaining: 1050, // 17:30
-        totalTime: 1500, // 25:00
+        progress: 0,
+        timeRemaining: 1500,
+        totalTime: 1500, // 25 minutes in seconds
         isRunning: true,
         pomodoroState: .work
     )
     .padding()
-    .background(Color(.systemBackground))
+
 }

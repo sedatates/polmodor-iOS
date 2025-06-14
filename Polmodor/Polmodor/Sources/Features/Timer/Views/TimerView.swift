@@ -48,6 +48,7 @@ struct TimerView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
             }
+            .frame(width: geometry.size.width, height: geometry.size.height)
         }
         .onAppear {
             timerViewModel.configure(with: modelContext)
