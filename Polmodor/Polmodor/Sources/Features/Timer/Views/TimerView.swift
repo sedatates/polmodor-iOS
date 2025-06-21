@@ -263,12 +263,12 @@ struct TimerView: View {
                     )
                 }
                 
-                QuickActionButton(
-                    icon: "chart.bar.fill",
-                    title: "Statistics",
-                    color: .orange
-                ) {
-                    // Navigate to statistics view
+                NavigationLink(destination: StatisticsView()) {
+                    QuickActionContent(
+                        icon: "chart.bar.fill",
+                        title: "Statistics",
+                        color: .orange
+                    )
                 }
             }
         }

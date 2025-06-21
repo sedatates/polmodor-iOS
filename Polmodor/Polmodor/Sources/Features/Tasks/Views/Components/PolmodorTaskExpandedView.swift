@@ -48,7 +48,7 @@ struct PolmodorTaskExpandedView: View {
                         )
                         .foregroundStyle(accentColor)
                     }
-                    .buttonStyle(ScaleButtonStyle())
+                    
                     .padding(.bottom, 16)
 
                     CustomNavigationLink {
