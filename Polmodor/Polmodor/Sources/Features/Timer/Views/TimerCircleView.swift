@@ -10,8 +10,9 @@ struct TimerCircleView: View {
     @State private var rotationAngle: Double = 0
     @State private var previousProgress: Double = 0
     
-    private let numberRadius: CGFloat = UIScreen.screenWidth / 2
-    private let circleWidth: CGFloat = UIScreen.screenWidth
+    private let circleRadius: CGFloat = UIScreen.screenWidth / 2 // Half of the screen width
+    private let circleWidth: CGFloat = UIScreen.screenWidth  // Width of the circle minus padding
+    private let numberOfQuartz: Int = 60
     
     private var stateColor: Color {
         switch pomodoroState {
@@ -24,103 +25,65 @@ struct TimerCircleView: View {
         }
     }
     
-    private var timeNumbers: [Int] {
-        let totalMinutes = Int(totalTime / 60)
-        var numbers: [Int] = []
-        
-        for i in 1...totalMinutes {
-            numbers.append(i)
-        }
-        numbers.append(0) // START position
-        
-        return numbers
-    }
-    
-    private var currentRotation: Double {
-        let progressAngle = progress * 1500
-        return progressAngle
-    }
-    
+   
     var body: some View {
         ZStack {
-            timeNumbersCircle
+            QuadrantView
             centerTimeDisplay
         }
+        .frame(maxWidth: UIScreen.screenWidth - 32, maxHeight: UIScreen.screenWidth)
         .frame(
-            width: circleWidth,
-            height: circleWidth
+            height: UIScreen.screenWidth
         )
         .onChange(of: progress) { oldValue, newValue in
             withAnimation(.easeInOut(duration: 0.5)) {
-                rotationAngle = currentRotation
+                rotationAngle += 6
             }
         }
         .onChange(of: isRunning) { oldValue, newValue in
             if newValue && progress > 0 {
                 withAnimation(.easeInOut(duration: 0.3)) {
-                    rotationAngle = currentRotation
+                    rotationAngle = (progress - previousProgress) * 360.0
                 }
             }
         }
-        .onAppear {
-            rotationAngle = currentRotation
-        }
+    
+        
     }
     
-    
-    
-    private var timeNumbersCircle: some View {
+    private var QuadrantView: some View {
         ZStack {
-            ForEach(Array(timeNumbers.enumerated()), id: \.offset) { index, number in
-                let angle = Double(index) * (360.0 / Double(timeNumbers.count))
-                let isStart = number == 0
-                
-                timeNumberView(
-                    number: isStart ? "START" : "\(number)",
-                    angle: angle,
-                    isStart: isStart,
-                    isActive: isActiveNumber(for: index)
-                )
+            ForEach(0..<numberOfQuartz, id: \ .self) { index in
+                let angle = Double(index) * (360.0 / Double(numberOfQuartz))
+                Quartz(angle: angle)
             }
         }
         .rotationEffect(.degrees(rotationAngle))
         .animation(.easeInOut(duration: 1.0), value: rotationAngle)
-        .position(x: circleWidth / 2, y: -circleWidth / 4)
+        .position(x: UIScreen.screenWidth / 2  , y: -UIScreen.screenWidth / 6)
     }
     
-    private func timeNumberView(number: String, angle: Double, isStart: Bool, isActive: Bool) -> some View {
-        let x = cos((angle) * .pi / 180) * circleWidth
-        let y = sin((angle) * .pi / 180) * circleWidth
+    private func Quartz(angle: Double) -> some View {
+        let x = circleWidth * cos(Angle.degrees(angle).radians)
+        let y = circleWidth * sin(Angle.degrees(angle).radians)
         
-        return Text(number)
-            .font(isStart ? .caption.weight(.bold) : .system(size: 16, weight: .medium))
-            .foregroundColor(isActive ? stateColor : (isStart ? stateColor.opacity(0.9) : .primary.opacity(0.6)))
-            .background(
-                Circle()
-                    .fill(isActive ? stateColor.opacity(0.2) : Color.clear)
-                    .frame(width: isStart ? 50 : 0, height: isStart ? 10 : 0)
-            )
-            .scaleEffect(isActive ? 1.5 : 1.0)
+        return Capsule()
+            .fill(.gray)
+            .opacity(0.6)
+            .frame(width: 4, height: 20)
             .rotationEffect(.degrees(-rotationAngle))
-            .animation(.easeInOut(duration: 0.3), value: isActive)
             .animation(.easeInOut(duration: 1.0), value: rotationAngle)
             .position(
-                x: numberRadius + x,
-                y: numberRadius + y
+                x: circleRadius + x - 32,
+                y: circleRadius + y
             )
-    }
-    
-    private func isActiveNumber(for index: Int) -> Bool {
-        let totalCount = timeNumbers.count
-        let progressIndex = Int(progress * Double(totalCount))
         
-        return index == min(progressIndex, totalCount - 1)
     }
     
     private var centerTimeDisplay: some View {
         VStack(spacing: 8) {
             Text(timeString)
-                .font(.system(size: 48, weight: .bold, design: .monospaced))
+                .font(.system(size: circleRadius * 0.5, weight: .bold, design: .monospaced))
                 .foregroundColor(.primary)
                 .contentTransition(.numericText())
                 .animation(.easeInOut(duration: 0.3), value: timeRemaining)
@@ -159,12 +122,12 @@ struct TimerCircleView: View {
 
 #Preview {
     TimerCircleView(
-        progress: 0,
-        timeRemaining: 1500,
+        progress: 0.5,
+        timeRemaining: 750, // 5 minutes in seconds
         totalTime: 1500, // 25 minutes in seconds
         isRunning: true,
         pomodoroState: .work
     )
     .padding()
-
+    
 }

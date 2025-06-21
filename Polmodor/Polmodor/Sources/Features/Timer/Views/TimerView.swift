@@ -43,12 +43,11 @@ struct TimerView: View {
                     
                     quickActionsSection
                     
-                    Spacer(minLength: 50)
+                    Spacer(minLength: 100)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-            }
-            .frame(width: geometry.size.width, height: geometry.size.height)
+                .padding(.top, 0)
+                .padding(.horizontal, 16)
+            }.scrollIndicators(.hidden)
         }
         .onAppear {
             timerViewModel.configure(with: modelContext)
@@ -259,7 +258,7 @@ struct TimerView: View {
                 }
             }
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 8)
     }
 }
 

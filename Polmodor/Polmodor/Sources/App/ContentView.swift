@@ -34,9 +34,12 @@ struct ContentView: View {
                     set: { updateSelectedTabStorage($0) }
                 )
             ) {
-                TimerView()
-                    .environmentObject(timerViewModel)
-                    .tag(Tab.timer)
+                NavigationStack {
+                    TimerView()
+                        .environmentObject(timerViewModel)
+                        .tag(Tab.timer)
+                }
+                .toolbarBackground(.hidden, for: .tabBar)
                 
                 NavigationStack {
                     TaskListView()
@@ -50,17 +53,7 @@ struct ContentView: View {
                 .toolbarBackground(.hidden, for: .tabBar)
                 .tag(Tab.settings)
             }
-            .toolbarBackground(.hidden, for: .tabBar)
-            .safeAreaInset(edge: .bottom) {
-                ModernTabBar(
-                    selectedTab: Binding(
-                        get: { currentTab },
-                        set: { updateSelectedTabStorage($0) }
-                    )
-                )
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-            }
+            
         }
         .preferredColorScheme(
             settingsModels.first?.isDarkModeEnabled == true ? .dark : .light
