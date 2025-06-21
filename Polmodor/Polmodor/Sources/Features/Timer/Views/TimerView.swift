@@ -29,25 +29,49 @@ struct TimerView: View {
         return nil
     }
     
+       
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-                VStack(spacing: 30) {
+
+                ZStack(alignment: .top) {
+                    
                     headerSection
+                    .padding(.horizontal, 32)
                     
-                    timerSection
+                    TimerBackgroundShape()
+                        .fill(timerViewModel.currentStateColor.opacity(0.1))
+                        .frame(
+                            width: UIScreen.screenWidth,
+                            height: UIScreen.screenWidth * 2
+                        )
+                        .offset(y: -UIScreen.screenWidth / 1.4)
+                        .allowsHitTesting(false)
+
+                    VStack(spacing: 20) {
+                        
+                        timerSection
+                        
+                        Group {
+                            controlsSection
+                            
+                            Spacer()
+                            
+                            activeTaskSection
+                            
+                            Spacer()
+                            
+                            quickActionsSection
+                            
+                            Spacer(minLength: 100)
+                        }.padding(.horizontal, 16)
+                    }
                     
-                    controlsSection
                     
-                    activeTaskSection
                     
-                    quickActionsSection
-                    
-                    Spacer(minLength: 100)
                 }
-                .padding(.top, 0)
-                .padding(.horizontal, 16)
-            }.scrollIndicators(.hidden)
+            }
+            .scrollIndicators(.hidden)
         }
         .onAppear {
             timerViewModel.configure(with: modelContext)
@@ -417,6 +441,36 @@ struct TaskSelectorView: View {
                 }
             }
         }
+    }
+}
+
+struct TimerBackgroundShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        let width = rect.width
+        let height = rect.height
+        let concaveDepth: CGFloat = UIScreen.screenWidth / 2
+        
+        // Start from top-left corner
+        path.move(to: CGPoint(x: 0, y: 0))
+        
+        // Top edge (rectangular)
+        path.addLine(to: CGPoint(x: width, y: 0))
+        
+        // Right edge
+        path.addLine(to: CGPoint(x: width, y: height - concaveDepth))
+        
+        // Concave bottom curve
+        path.addQuadCurve(
+            to: CGPoint(x: 0, y: height - concaveDepth),
+            control: CGPoint(x: width / 2, y: height - UIScreen.screenWidth / 4)
+        )
+        
+        // Left edge back to start
+        path.addLine(to: CGPoint(x: 0, y: 0))
+        
+        return path
     }
 }
 

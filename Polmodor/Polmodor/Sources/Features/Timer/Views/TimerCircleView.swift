@@ -25,13 +25,12 @@ struct TimerCircleView: View {
         }
     }
     
-   
     var body: some View {
         ZStack {
             QuadrantView
             centerTimeDisplay
         }
-        .frame(maxWidth: UIScreen.screenWidth - 32, maxHeight: UIScreen.screenWidth)
+        .frame(maxWidth: UIScreen.screenWidth, maxHeight: UIScreen.screenWidth)
         .frame(
             height: UIScreen.screenWidth
         )
@@ -47,8 +46,6 @@ struct TimerCircleView: View {
                 }
             }
         }
-    
-        
     }
     
     private var QuadrantView: some View {
@@ -69,12 +66,12 @@ struct TimerCircleView: View {
         
         return Capsule()
             .fill(.gray)
-            .opacity(0.6)
+            .opacity(0.3)
             .frame(width: 4, height: 20)
             .rotationEffect(.degrees(-rotationAngle))
             .animation(.easeInOut(duration: 1.0), value: rotationAngle)
             .position(
-                x: circleRadius + x - 32,
+                x: circleRadius + x,
                 y: circleRadius + y
             )
         
