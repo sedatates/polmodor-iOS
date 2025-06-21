@@ -30,10 +30,11 @@ struct TimerCircleView: View {
             QuadrantView
             centerTimeDisplay
         }
-        .frame(maxWidth: UIScreen.screenWidth, maxHeight: UIScreen.screenWidth)
         .frame(
+            width: UIScreen.screenWidth,
             height: UIScreen.screenWidth
         )
+
         .onChange(of: progress) { oldValue, newValue in
             withAnimation(.easeInOut(duration: 0.5)) {
                 rotationAngle += 6
@@ -57,7 +58,7 @@ struct TimerCircleView: View {
         }
         .rotationEffect(.degrees(rotationAngle))
         .animation(.easeInOut(duration: 1.0), value: rotationAngle)
-        .position(x: UIScreen.screenWidth / 2  , y: -UIScreen.screenWidth / 6)
+        .position(x: UIScreen.screenWidth / 2  , y: -UIScreen.screenWidth / 8)
     }
     
     private func Quartz(angle: Double) -> some View {

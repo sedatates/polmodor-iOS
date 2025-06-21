@@ -4,6 +4,7 @@ import SwiftData
 struct TimerView: View {
     @StateObject private var timerViewModel = TimerViewModel()
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
     
     @Query(sort: [
         SortDescriptor(\PolmodorTask.createdAt, order: .reverse)
@@ -11,7 +12,6 @@ struct TimerView: View {
     
     @State private var showingTaskSelector = false
     @State private var showingTaskForm = false
-    @State private var showingSettings = false
     
     private var activeTask: PolmodorTask? {
         if let subtaskID = timerViewModel.activeSubtaskID {
@@ -29,29 +29,27 @@ struct TimerView: View {
         return nil
     }
     
-       
+    
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
-
+                
                 ZStack(alignment: .top) {
                     
                     headerSection
-                    .padding(.horizontal, 32)
+                        .padding(.horizontal, 32)
                     
                     TimerBackgroundShape()
-                        .fill(timerViewModel.currentStateColor.opacity(0.1))
+                        .fill(timerViewModel.currentStateColor.opacity(colorScheme == .dark ? 0.25 : 0.15))
                         .frame(
                             width: UIScreen.screenWidth,
                             height: UIScreen.screenWidth * 2
                         )
-                        .offset(y: -UIScreen.screenWidth / 1.4)
+                        .offset(y: -UIScreen.screenWidth / 1.5)
                         .allowsHitTesting(false)
-
+                    
                     VStack(spacing: 20) {
-                        
                         timerSection
-                        
                         Group {
                             controlsSection
                             
@@ -64,11 +62,9 @@ struct TimerView: View {
                             quickActionsSection
                             
                             Spacer(minLength: 100)
-                        }.padding(.horizontal, 16)
+                        }
+                        .padding(.horizontal, 16)
                     }
-                    
-                    
-                    
                 }
             }
             .scrollIndicators(.hidden)
@@ -89,11 +85,7 @@ struct TimerView: View {
                 }
             }
         }
-        .sheet(isPresented: $showingSettings) {
-            NavigationView {
-                SettingsView()
-            }
-        }
+        
     }
     
     private var headerSection: some View {
@@ -110,9 +102,7 @@ struct TimerView: View {
             
             Spacer()
             
-            Button {
-                showingSettings = true
-            } label: {
+            NavigationLink(destination: SettingsView()) {
                 Image(systemName: "gearshape.fill")
                     .font(.title2)
                     .foregroundColor(.secondary)
@@ -265,12 +255,12 @@ struct TimerView: View {
                     showingTaskForm = true
                 }
                 
-                QuickActionButton(
-                    icon: "list.bullet.clipboard",
-                    title: "All Tasks",
-                    color: .green
-                ) {
-                    showingTaskSelector = true
+                NavigationLink(destination: TaskListView()) {
+                    QuickActionContent(
+                        icon: "list.bullet.clipboard",
+                        title: "All Tasks",
+                        color: .green
+                    )
                 }
                 
                 QuickActionButton(
@@ -374,23 +364,33 @@ struct QuickActionButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(color)
-                
-                Text(title)
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(.systemGray6))
-            )
+            QuickActionContent(icon: icon, title: title, color: color)
         }
+    }
+}
+
+struct QuickActionContent: View {
+    let icon: String
+    let title: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 24, weight: .medium))
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.caption.weight(.medium))
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemGray6))
+        )
     }
 }
 
