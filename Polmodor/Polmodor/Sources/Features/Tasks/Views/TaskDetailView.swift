@@ -12,7 +12,7 @@ struct TaskDetailView: View {
 
     var body: some View {
         List {
-            Section("Task Details") {
+            Section{
                 TextField("Title", text: $task.title)
                 TextField("Description", text: $task.taskDescription, axis: .vertical)
                     .lineLimit(3...6)
@@ -114,13 +114,10 @@ struct TaskDetailView: View {
                 }
             }
         }
-        .navigationTitle("Task Details")
-        .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAddSubtask) {
             SubTaskAddView(task: task)
                 .presentationDetents([.medium])
         }
-        .withFloatingTabBarPadding()
     }
 
     private func timeString(from seconds: Double) -> String {

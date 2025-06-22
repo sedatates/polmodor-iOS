@@ -175,7 +175,7 @@ final class TimerViewModel: ObservableObject {
         let taskTitle = activeSubtaskTitle ?? "Polmodor Timer"
         let remainingTimeSeconds = Int(timeRemaining)
         let duration = Int(state.duration)
-        let breakType = state == .shortBreak ? "short" : (state == .longBreak ? "long" : "none")
+        _ = state == .shortBreak ? "short" : (state == .longBreak ? "long" : "none")
 
         // Get parent task name if available
         var parentTaskName: String? = nil
