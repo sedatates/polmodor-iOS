@@ -175,29 +175,41 @@ struct TaskListView: View {
   // MARK: - Page Header
 
   private var pageHeader: some View {
-    HStack {
+    HStack(spacing: 8) {
       // Active Tasks Button
       Button {
         viewModel.changePage(to: .active)
       } label: {
-        VStack(spacing: 4) {
-          HStack(spacing: 6) {
-            Image(systemName: "circle")
-              .font(.subheadline.weight(.semibold))
+        HStack(spacing: 8) {
+          Image(systemName: "circle")
+            .font(.caption.weight(.medium))
+            .foregroundColor(viewModel.currentPage == .active ? .white : .blue)
 
-            Text("Active")
-              .font(.subheadline.weight(.semibold))
-          }
+          Text("Active")
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(viewModel.currentPage == .active ? .white : .blue)
 
           Text("\(viewModel.activeTasks.count)")
-            .font(.title2.weight(.bold))
+            .font(.subheadline.weight(.bold))
+            .foregroundColor(viewModel.currentPage == .active ? .white : .blue)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+              Capsule()
+                .fill(
+                  viewModel.currentPage == .active
+                    ? Color.white.opacity(0.2) : Color.blue.opacity(0.15))
+            )
         }
-        .foregroundColor(viewModel.currentPage == .active ? .white : .blue)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .background(
-          RoundedRectangle(cornerRadius: 16)
-            .fill(viewModel.currentPage == .active ? .blue : .blue.opacity(0.1))
+          Capsule()
+            .fill(viewModel.currentPage == .active ? .blue : .blue.opacity(0.08))
+        )
+        .overlay(
+          Capsule()
+            .stroke(viewModel.currentPage == .active ? .clear : .blue.opacity(0.3), lineWidth: 1)
         )
       }
 
@@ -205,29 +217,44 @@ struct TaskListView: View {
       Button {
         viewModel.changePage(to: .completed)
       } label: {
-        VStack(spacing: 4) {
-          HStack(spacing: 6) {
-            Image(systemName: "checkmark.circle.fill")
-              .font(.subheadline.weight(.semibold))
+        HStack(spacing: 8) {
+          Image(systemName: "checkmark.circle.fill")
+            .font(.caption.weight(.medium))
+            .foregroundColor(viewModel.currentPage == .completed ? .white : .green)
 
-            Text("Completed")
-              .font(.subheadline.weight(.semibold))
-          }
+          Text("Completed")
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(viewModel.currentPage == .completed ? .white : .green)
 
           Text("\(viewModel.completedTasks.count)")
-            .font(.title2.weight(.bold))
+            .font(.subheadline.weight(.bold))
+            .foregroundColor(viewModel.currentPage == .completed ? .white : .green)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+              Capsule()
+                .fill(
+                  viewModel.currentPage == .completed
+                    ? Color.white.opacity(0.2) : Color.green.opacity(0.15))
+            )
         }
-        .foregroundColor(viewModel.currentPage == .completed ? .white : .green)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
         .background(
-          RoundedRectangle(cornerRadius: 16)
-            .fill(viewModel.currentPage == .completed ? .green : .green.opacity(0.1))
+          Capsule()
+            .fill(viewModel.currentPage == .completed ? .green : .green.opacity(0.08))
+        )
+        .overlay(
+          Capsule()
+            .stroke(
+              viewModel.currentPage == .completed ? .clear : .green.opacity(0.3), lineWidth: 1)
         )
       }
+
+      Spacer()
     }
     .padding(.horizontal, 16)
-    .padding(.bottom, 8)
+    .padding(.bottom, 12)
   }
 
   // MARK: - Task Page View
