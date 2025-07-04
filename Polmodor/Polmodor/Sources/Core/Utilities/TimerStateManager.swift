@@ -10,11 +10,15 @@ import SwiftUI
   // MARK: - UserDefaults Keys
   private enum Keys {
     static let activeSubtaskID = "TimerStateManager.activeSubtaskID"
-    static let timeRemaining = "TimerStateManager.timeRemaining"
+    static let originalDuration = "TimerStateManager.originalDuration"
     static let pomodoroState = "TimerStateManager.pomodoroState"
     static let completedPomodoros = "TimerStateManager.completedPomodoros"
     static let isRunning = "TimerStateManager.isRunning"
-    static let lastPauseDate = "TimerStateManager.lastPauseDate"
+    static let startedAt = "TimerStateManager.startedAt"
+    static let pausedAt = "TimerStateManager.pausedAt"
+    static let timeElapsedBeforePause = "TimerStateManager.timeElapsedBeforePause"
+    static let activeTaskTitle = "TimerStateManager.activeTaskTitle"
+    static let sessionStartedAt = "TimerStateManager.sessionStartedAt"
   }
 
   // MARK: - Private Properties
@@ -34,10 +38,14 @@ import SwiftUI
   /// Save the current timer state to persistent storage
   func saveTimerState(
     activeSubtaskID: UUID?,
-    timeRemaining: TimeInterval,
+    originalDuration: TimeInterval,
     pomodoroState: PomodoroState,
     completedPomodoros: Int,
-    isRunning: Bool
+    isRunning: Bool,
+    startedAt: Date?,
+    pausedAt: Date?,
+    timeElapsedBeforePause: TimeInterval,
+    activeTaskTitle: String? = nil
   ) {
     // Save activeSubtaskID (can be nil)
     if let activeSubtaskID = activeSubtaskID {
@@ -47,25 +55,44 @@ import SwiftUI
     }
 
     // Save timer state
-    UserDefaults.standard.set(timeRemaining, forKey: Keys.timeRemaining)
+    UserDefaults.standard.set(originalDuration, forKey: Keys.originalDuration)
     UserDefaults.standard.set(pomodoroState.rawValue, forKey: Keys.pomodoroState)
     UserDefaults.standard.set(completedPomodoros, forKey: Keys.completedPomodoros)
-
-    // Save running state and record timestamp if paused
     UserDefaults.standard.set(isRunning, forKey: Keys.isRunning)
-    if !isRunning {
-      UserDefaults.standard.set(Date(), forKey: Keys.lastPauseDate)
+    UserDefaults.standard.set(timeElapsedBeforePause, forKey: Keys.timeElapsedBeforePause)
+
+    // Save timestamps
+    if let startedAt = startedAt {
+      UserDefaults.standard.set(startedAt, forKey: Keys.startedAt)
     } else {
-      UserDefaults.standard.removeObject(forKey: Keys.lastPauseDate)
+      UserDefaults.standard.removeObject(forKey: Keys.startedAt)
+    }
+
+    if let pausedAt = pausedAt {
+      UserDefaults.standard.set(pausedAt, forKey: Keys.pausedAt)
+    } else {
+      UserDefaults.standard.removeObject(forKey: Keys.pausedAt)
+    }
+
+    // Save task title for widgets
+    if let activeTaskTitle = activeTaskTitle {
+      UserDefaults.standard.set(activeTaskTitle, forKey: Keys.activeTaskTitle)
+    } else {
+      UserDefaults.standard.removeObject(forKey: Keys.activeTaskTitle)
+    }
+
+    // Save session start time
+    if isRunning && startedAt != nil {
+      UserDefaults.standard.set(Date(), forKey: Keys.sessionStartedAt)
     }
 
     // Make sure changes are synchronized
     UserDefaults.standard.synchronize()
   }
 
-  /// Load the timer state from persistent storage
+  /// Load the timer state from persistent storage with elapsed time calculation
   @MainActor
-  func loadTimerState() -> (UUID?, TimeInterval, PomodoroState, Int, Bool) {
+  func loadTimerState() -> (UUID?, TimeInterval, PomodoroState, Int, Bool, Date?, Date?, TimeInterval) {
     // Load active subtask ID (if any)
     let activeSubtaskIDString = UserDefaults.standard.string(forKey: Keys.activeSubtaskID)
     let activeSubtaskID =
@@ -75,40 +102,61 @@ import SwiftUI
     let validatedSubtaskID = validateSubtaskID(activeSubtaskID)
 
     // Load timer state with fallbacks to defaults
-    let timeRemaining = UserDefaults.standard.double(forKey: Keys.timeRemaining)
+    let originalDuration = UserDefaults.standard.double(forKey: Keys.originalDuration)
     let stateRawValue =
       UserDefaults.standard.string(forKey: Keys.pomodoroState) ?? PomodoroState.work.rawValue
     let state = PomodoroState(rawValue: stateRawValue) ?? .work
     let completedPomodoros = UserDefaults.standard.integer(forKey: Keys.completedPomodoros)
-
-    // For the running state, we need to consider if the app was closed while running
     var isRunning = UserDefaults.standard.bool(forKey: Keys.isRunning)
-
-    // If it was running but the app was closed for a while, adjust the time remaining
-    if isRunning,
-      let lastPauseDate = UserDefaults.standard.object(forKey: Keys.lastPauseDate) as? Date
-    {
-      let elapsedTimeSincePause = Date().timeIntervalSince(lastPauseDate)
-
-      // If we've been closed for less than the timer duration, adjust the time
-      // Otherwise, we'll use the default values
-      if elapsedTimeSincePause < state.duration {
-        // We don't auto-resume when the app relaunches
+    
+    let startedAt = UserDefaults.standard.object(forKey: Keys.startedAt) as? Date
+    let pausedAt = UserDefaults.standard.object(forKey: Keys.pausedAt) as? Date
+    let timeElapsedBeforePause = UserDefaults.standard.double(forKey: Keys.timeElapsedBeforePause)
+    
+    // Calculate current remaining time based on state
+    var currentTimeRemaining: TimeInterval = 0
+    
+    if let startedAt = startedAt {
+      if let pausedAt = pausedAt {
+        // Timer was paused - use elapsed time before pause
+        currentTimeRemaining = max(0, originalDuration - timeElapsedBeforePause)
         isRunning = false
+        print("🟡 Timer was paused - remaining: \(Int(currentTimeRemaining))s")
+      } else if isRunning {
+        // Timer is running - calculate elapsed time from start
+        let totalElapsed = Date().timeIntervalSince(startedAt)
+        currentTimeRemaining = max(0, originalDuration - totalElapsed)
+        
+        if currentTimeRemaining <= 0 {
+          isRunning = false
+          print("🟢 Timer completed while app was closed - elapsed: \(Int(totalElapsed))s")
+        } else {
+          print("🟢 Timer running - elapsed: \(Int(totalElapsed))s, remaining: \(Int(currentTimeRemaining))s")
+        }
+      } else {
+        // Timer was stopped
+        currentTimeRemaining = originalDuration > 0 ? originalDuration : state.duration
       }
+    } else {
+      // No start time - use default duration
+      currentTimeRemaining = originalDuration > 0 ? originalDuration : state.duration
     }
 
-    return (validatedSubtaskID, timeRemaining, state, completedPomodoros, isRunning)
+    return (validatedSubtaskID, currentTimeRemaining, state, completedPomodoros, isRunning, startedAt, pausedAt, timeElapsedBeforePause)
   }
 
   /// Clear all saved timer state
   func clearTimerState() {
     UserDefaults.standard.removeObject(forKey: Keys.activeSubtaskID)
-    UserDefaults.standard.removeObject(forKey: Keys.timeRemaining)
+    UserDefaults.standard.removeObject(forKey: Keys.originalDuration)
     UserDefaults.standard.removeObject(forKey: Keys.pomodoroState)
     UserDefaults.standard.removeObject(forKey: Keys.completedPomodoros)
     UserDefaults.standard.removeObject(forKey: Keys.isRunning)
-    UserDefaults.standard.removeObject(forKey: Keys.lastPauseDate)
+    UserDefaults.standard.removeObject(forKey: Keys.startedAt)
+    UserDefaults.standard.removeObject(forKey: Keys.pausedAt)
+    UserDefaults.standard.removeObject(forKey: Keys.timeElapsedBeforePause)
+    UserDefaults.standard.removeObject(forKey: Keys.activeTaskTitle)
+    UserDefaults.standard.removeObject(forKey: Keys.sessionStartedAt)
     UserDefaults.standard.synchronize()
   }
 

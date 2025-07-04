@@ -37,6 +37,7 @@ import SwiftUI
       settings.workDuration = max(15, min(duration, 60))
       self.workDurationMinutes = settings.workDuration
     }
+    NotificationCenter.default.post(name: NSNotification.Name("SettingsChanged"), object: nil)
   }
 
   @MainActor
@@ -46,6 +47,7 @@ import SwiftUI
       settings.shortBreakDuration = max(3, min(duration, 15))
       self.shortBreakDurationMinutes = settings.shortBreakDuration
     }
+    NotificationCenter.default.post(name: NSNotification.Name("SettingsChanged"), object: nil)
   }
 
   @MainActor
@@ -55,6 +57,7 @@ import SwiftUI
       settings.longBreakDuration = max(10, min(duration, 30))
       self.longBreakDurationMinutes = settings.longBreakDuration
     }
+    NotificationCenter.default.post(name: NSNotification.Name("SettingsChanged"), object: nil)
   }
 
   @MainActor

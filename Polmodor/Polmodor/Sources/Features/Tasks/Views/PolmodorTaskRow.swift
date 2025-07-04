@@ -17,12 +17,13 @@ struct PolmodorTaskRow: View {
     @Namespace private var animation
     @Environment(\.colorScheme) private var colorScheme
     
+    
     // Animation properties
     @State private var cardHeight: CGFloat = 0
     @State private var subtaskOpacity: Double = 0
     
     private var backgroundColor: Color {
-        colorScheme == .dark ? Color(white: 0.15) : Color.white
+        colorScheme == .dark ? Color(white: 0.10) : Color.white
     }
     
     private var accentColor: Color {

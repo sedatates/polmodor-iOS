@@ -1,140 +1,148 @@
 import SwiftUI
 
-struct TimerCircleViewLEgacy: View {
+struct TimerCircleView: View {
     let progress: Double
-    let timeRemaining: String
-    let state: PomodoroState
+    let timeRemaining: TimeInterval
+    let totalTime: TimeInterval
     let isRunning: Bool
-    let onStart: () -> Void
-    let onPause: () -> Void
-    let onReset: () -> Void
-    let onAddTask: () -> Void
-
-    @State private var isAnimating = false
+    let pomodoroState: PomodoroState
+    
     @State private var rotationAngle: Double = 0
-
-    private var progressColor: Color {
-        switch state {
+    @State private var timer: Timer?
+    
+    private let circleRadius: CGFloat = UIScreen.screenWidth / 2 // Half of the screen width
+    private let circleWidth: CGFloat = UIScreen.screenWidth  // Width of the circle minus padding
+    private let numberOfQuartz: Int = 60
+    
+    private var stateColor: Color {
+        switch pomodoroState {
         case .work:
-            return Color.timerColors.workStart
+            return .red
         case .shortBreak:
-            return Color.timerColors.shortBreakStart
+            return .green
         case .longBreak:
-            return Color.timerColors.longBreakStart
+            return .blue
         }
     }
-
-    private var gradientColors: [Color] {
-        switch state {
-        case .work:
-            return [Color.timerColors.workStart, Color.timerColors.workEnd]
-        case .shortBreak:
-            return [Color.timerColors.shortBreakStart, Color.timerColors.shortBreakEnd]
-        case .longBreak:
-            return [Color.timerColors.longBreakStart, Color.timerColors.longBreakEnd]
-        }
-    }
-
-    private func markerText(for minute: Int, totalDuration: Int) -> String {
-        if minute == 0 {
-            return "START"
-        } else if minute == totalDuration {
-            return "END"
-        } else {
-            return "\(minute)"
-        }
-    }
-
-    private func TimerMarkers(radius: CGFloat, totalDuration: Int) -> some View {
-        let markerCount = totalDuration + 1
-        return ZStack {
-            ForEach(Array(0..<markerCount), id: \.self) { index in
-                let angle = Double(index) / Double(markerCount - 1) * 2 * .pi - .pi / 2
-                let markerRadius = radius - 30
-                let x = cos(angle) * markerRadius
-                let y = sin(angle) * markerRadius
-
-                Text(markerText(for: index, totalDuration: totalDuration))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .position(x: x + radius, y: y + radius)
-                    .rotationEffect(.degrees(-rotationAngle))
-            }
-        }
-    }
-
-    private func TimerRing(radius: CGFloat) -> some View {
-        Circle()
-            .trim(from: 0, to: progress)
-            .stroke(
-                LinearGradient(
-                    colors: gradientColors,
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                style: StrokeStyle(lineWidth: 12, lineCap: .round)
-            )
-            .frame(width: radius * 2, height: radius * 2)
-            .rotationEffect(.degrees(-90))
-            .rotation3DEffect(.degrees(isAnimating ? 360 : 0), axis: (x: 0, y: 1, z: 0))
-            .animation(
-                .spring(response: 0.8, dampingFraction: 0.7, blendDuration: 0.3),
-                value: isAnimating
-            )
-    }
-
-    private func TimerDisplay() -> some View {
-        VStack(spacing: 8) {
-            Text(timeRemaining)
-                .font(Font.custom("Bungee-Regular", size: 72))
-                .monospacedDigit()
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 2)
-
-            Text(state.rawValue.uppercased())
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundColor(.white.opacity(0.8))
-        }
-    }
-
-    private func ControlButtons() -> some View {
-        HStack(spacing: 24) {
-
-        }
-    }
-
+    
     var body: some View {
-        GeometryReader { geometry in
-            let circleRadius = min(geometry.size.width, geometry.size.height)
+        ZStack {
+            QuadrantView
+            centerTimeDisplay
+        }
+        .frame(
+            width: UIScreen.screenWidth,
+            height: UIScreen.screenWidth
+        )
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    ZStack {
-                        Circle()
-                            .fill(progressColor)
-                            .frame(width: circleRadius * 2, height: circleRadius * 2)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 2)
-                            )
-                            .offset(x: -circleRadius / 2, y: -circleRadius)
-                            .shadow(color: progressColor.opacity(0.3), radius: 15, x: 0, y: 10)
-
-                        // Timer
-                        TimerDisplay().offset(x: -circleRadius / 2, y: -circleRadius / 2)
-
-                    }
-                    .frame(height: circleRadius * 2)
-                    .padding(.top, 40)
-
-                    VStack(spacing: 32) {
-                        ControlButtons()
-
-                    }
-                    .padding(.bottom, 40)
-                }
+        .onChange(of: isRunning) { oldValue, newValue in
+            if newValue {
+                startRotation()
+            } else {
+                stopRotation()
             }
         }
-        .ignoresSafeArea()
+        .onAppear {
+            if isRunning {
+                startRotation()
+            }
+        }
+        .onDisappear {
+            stopRotation()
+        }
     }
+    
+    private var QuadrantView: some View {
+        ZStack {
+            ForEach(0..<numberOfQuartz, id: \ .self) { index in
+                let angle = Double(index) * (360.0 / Double(numberOfQuartz))
+                Quartz(angle: angle)
+            }
+        }
+        .rotationEffect(.degrees(rotationAngle))
+        .animation(.easeInOut(duration: 1.0), value: rotationAngle)
+        .position(x: UIScreen.screenWidth / 2  , y: -UIScreen.screenWidth / 8)
+    }
+    
+    private func Quartz(angle: Double) -> some View {
+        let x = circleWidth * cos(Angle.degrees(angle).radians)
+        let y = circleWidth * sin(Angle.degrees(angle).radians)
+        
+        return Capsule()
+            .fill(.gray)
+            .opacity(0.3)
+            .frame(width: 4, height: 20)
+            .rotationEffect(.degrees(-rotationAngle))
+            .animation(.easeInOut(duration: 1.0), value: rotationAngle)
+            .position(
+                x: circleRadius + x,
+                y: circleRadius + y
+            )
+        
+    }
+    
+    private var centerTimeDisplay: some View {
+        VStack(spacing: 8) {
+            Text(timeString)
+                .font(.system(size: circleRadius * 0.5, weight: .bold, design: .monospaced))
+                .foregroundColor(.primary)
+                .contentTransition(.numericText())
+                .animation(.easeInOut(duration: 0.3), value: timeRemaining)
+            
+            Text(pomodoroState.title.uppercased())
+                .font(.caption.weight(.semibold))
+                .foregroundColor(stateColor)
+                .tracking(1.5)
+            
+            if isRunning {
+                HStack(spacing: 4) {
+                    ForEach(0..<3) { index in
+                        Circle()
+                            .fill(stateColor.opacity(0.7))
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(isRunning ? 1.0 : 0.5)
+                            .animation(
+                                .easeInOut(duration: 0.6)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.2),
+                                value: isRunning
+                            )
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+    
+    private var timeString: String {
+        let minutes = Int(timeRemaining) / 60
+        let seconds = Int(timeRemaining) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    private func startRotation() {
+        stopRotation() // Önce mevcut timer'ı durdur
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            withAnimation(.easeOut(duration: 0.2)) {
+                rotationAngle += 6 // 360 degrees / 60 segments = 6 degrees per second
+            }
+        }
+    }
+    
+    private func stopRotation() {
+        timer?.invalidate()
+        timer = nil
+    }
+}
+
+#Preview {
+    TimerCircleView(
+        progress: 0.5,
+        timeRemaining: 750, // 5 minutes in seconds
+        totalTime: 1500, // 25 minutes in seconds
+        isRunning: true,
+        pomodoroState: .work
+    )
+    .padding()
+    
 }

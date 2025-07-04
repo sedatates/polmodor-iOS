@@ -19,6 +19,7 @@ enum ModelContainerSetup {
             PolmodorSubTask.self,
             TaskCategory.self,
             SettingsModel.self,
+            StatisticsModel.self,
         ])
         
         let modelConfiguration = ModelConfiguration(

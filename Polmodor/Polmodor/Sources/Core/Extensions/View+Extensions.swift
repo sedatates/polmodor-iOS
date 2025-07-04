@@ -91,3 +91,13 @@ extension View {
     self.modifier(ScrollViewBottomPadding(height: height))
   }
 }
+
+//UISCreen.main.bounds.width
+extension UIScreen {
+    static var screenWidth: CGFloat {
+        return UIScreen.main.bounds.width
+    }
+    static var screenHeight: CGFloat {
+        return UIScreen.main.bounds.height
+    }
+}

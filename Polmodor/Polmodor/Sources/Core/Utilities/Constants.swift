@@ -6,6 +6,25 @@ import SwiftUI
 #endif
 
 enum Constants {
+    enum Theme : String, CaseIterable {
+        case light = "Light"
+        case dark = "Dark"
+        case system = "System"
+
+        var name: String {
+            switch self {
+            case .light:
+                return NSLocalizedString("Light", comment: "Light theme")
+            case .dark:
+                return NSLocalizedString("Dark", comment: "Dark theme")
+            case .system:
+                return NSLocalizedString("System", comment: "System theme")
+            }
+        }
+    }
+
+        
+    
     enum Timer {
         static let minimumWorkDuration: TimeInterval = 15 * 60  // 15 minutes
         static let maximumWorkDuration: TimeInterval = 60 * 60  // 60 minutes

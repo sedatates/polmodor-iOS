@@ -24,8 +24,14 @@ MIT License
 bu subtasklara ait pomodoro countlar var ve her timer tamamlandığında bu pomodoro countlar bir artacak.
 @PomodoroState.swift burada subtasklar için pomodorocount alanları vardı diye hatılrıyorum. @SubTaskAddView.swift viewında pomodoro sayısını ayarlamak için bir alana daha ihtiyacımız var bu bir subtaskın pomodoro sayısını set edecek. maksümum 10 giriliyor olacak ve 4 ten fazla girildiğinde sheetde bir ta warning çıkmlaı consider breaking this task to smaller part " benzeri.
 
-bunun için gerekli ayaralamalı projeyi detaylı olarak incelerek yap ve gerekli geliştirmeleri projeye uygunbir şekilde yapman gerekiyor. Projede hata yapmamaya çalış yoksa senin için kötü olur. Temiz commentlinelar ile birlikte güzel bir çalışma yap swift data kullanmalısın. Hata yapmamalısın yoksa seni cezalandırırım.
+projeyi senior ios developer olarak detaylı olarak incelerek yap ve gerekli geliştirmeleri projeye uygunbir şekilde yapman gerekiyor. Projede hata yapmamaya çalış yoksa senin için kötü olur. Temiz commentlinelar ile birlikte güzel bir çalışma yap swift data kullanmalısın. Hata yapmamalısın yoksa seni cezalandırırım.
 Bir fonksiyon, struct oluştracağın zaman daha önce bir yerde yapılmış mı kontrol etmelisin. dublicate hatası almak istemiyorum.bunun için projeyi komple incelemelisin.
+import hatalarını çözmeye çalışma
+if ile başlayan bir import yapısı kurmaya çalışma
+#if canImport(UIKit) gibi bir şey yapmaya çalışma
+@preconcurrency import class gibi bir şey yapmaya çalışma
+bunun gibi bir şey yapmak zorunda kalırsan yapma bunları es geçebilrisin.
+SwiftUIda view import etmek zorunda değilsin.
 
 import hatalarını çözmeye çalışma
 @preconcurrency import class Polmodor.TimerViewModel

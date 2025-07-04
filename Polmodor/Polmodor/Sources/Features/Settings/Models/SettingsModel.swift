@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class SettingsModel {
+final class SettingsModel : ObservableObject {
     // MARK: - Timer Settings
     var workDuration: Int = 25
     var shortBreakDuration: Int = 5
