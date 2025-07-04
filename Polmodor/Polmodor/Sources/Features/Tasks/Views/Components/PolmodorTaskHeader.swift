@@ -54,26 +54,11 @@ struct PolmodorTaskHeader: View {
       // Status indicators
       HStack(spacing: 8) {
         if task.completed {
-          Button(action: {
-            uncompleteTask()
-          }) {
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-              .symbolRenderingMode(.hierarchical)
-              .font(.system(size: 18))
-          }
-          .buttonStyle(.plain)
+          Image(systemName: "checkmark.circle.fill")
+            .foregroundStyle(.green)
+            .symbolRenderingMode(.hierarchical)
+            .font(.system(size: 18))
         } else {
-          Button(action: {
-            completeTask()
-          }) {
-            Image(systemName: "circle")
-              .foregroundStyle(.secondary)
-              .symbolRenderingMode(.hierarchical)
-              .font(.system(size: 18))
-          }
-          .buttonStyle(.plain)
-
           if task.isTimerRunning {
             Image(systemName: "timer.circle.fill")
               .foregroundStyle(.orange)
@@ -108,29 +93,7 @@ struct PolmodorTaskHeader: View {
     .padding(.vertical, 16)
   }
 
-  private func completeTask() {
-    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-      task.completed = true
-      task.completedAt = Date()
-      task.status = .completed
 
-      // Haptic feedback
-      let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-      impactFeedback.impactOccurred()
-    }
-  }
-
-  private func uncompleteTask() {
-    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-      task.completed = false
-      task.completedAt = nil
-      task.status = .todo
-
-      // Haptic feedback
-      let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-      impactFeedback.impactOccurred()
-    }
-  }
 }
 
 struct PolmodorTaskHeader_Previews: PreviewProvider {

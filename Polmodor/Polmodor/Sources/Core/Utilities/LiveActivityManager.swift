@@ -30,7 +30,7 @@ import SwiftUI
     taskTitle: String,
     remainingTime: Int,
     sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType,
-    startedAt: Date? = Date(),
+    startedAt: Date? = nil,
     pausedAt: Date? = nil,
     duration: Int,
     isLocked: Bool = false
@@ -43,39 +43,15 @@ import SwiftUI
 
     print("🟢 Starting or updating Live Activity for: \(taskTitle)")
 
-    // If we already have an activity, check if we need to recreate it or just update it
+    // Always end existing activities first to avoid conflicts
     if let currentActivity = activity {
-      // Get the current state to check the session type
-      let currentState = currentActivity.content.state
+      print("🟢 Ending existing Live Activity before creating new one")
+      Task {
+        await currentActivity.end(nil, dismissalPolicy: .immediate)
+        try? await Task.sleep(for: .seconds(0.2))
 
-      // If the session type has changed, we should recreate the activity
-      // Otherwise, just update the existing one
-      if currentState.sessionType != sessionType {
-        print(
-          "🟢 Session type changed from \(currentState.sessionType) to \(sessionType), recreating Live Activity"
-        )
-
-        // End the existing activity before creating a new one
-        Task {
-          await currentActivity.end(nil, dismissalPolicy: .immediate)
-          try? await Task.sleep(for: .seconds(0.3))  // Give it time to fully end
-
-          // Create new activity after a short delay
-          await startNewLiveActivity(
-            taskTitle: taskTitle,
-            remainingTime: remainingTime,
-            sessionType: sessionType,
-            startedAt: startedAt,
-            pausedAt: pausedAt,
-            duration: duration,
-            isLocked: isLocked
-          )
-        }
-      } else {
-        // Just update the existing activity
-        print("🟢 Updating existing Live Activity with same session type: \(sessionType)")
-
-        let updatedState = PolmodorLiveActivityAttributes.ContentState(
+        // Create new activity after cleanup
+        await startNewLiveActivity(
           taskTitle: taskTitle,
           remainingTime: remainingTime,
           sessionType: sessionType,
@@ -84,28 +60,21 @@ import SwiftUI
           duration: duration,
           isLocked: isLocked
         )
-
-        Task {
-          await currentActivity.update(
-            ActivityContent(state: updatedState, staleDate: nil)
-          )
-        }
       }
-      return
-    }
-
-    // No existing activity, create a new one
-    print("🟢 No existing activity, creating new Live Activity")
-    Task {
-      await startNewLiveActivity(
-        taskTitle: taskTitle,
-        remainingTime: remainingTime,
-        sessionType: sessionType,
-        startedAt: startedAt,
-        pausedAt: pausedAt,
-        duration: duration,
-        isLocked: isLocked
-      )
+    } else {
+      // No existing activity, create a new one
+      print("🟢 No existing activity, creating new Live Activity")
+      Task {
+        await startNewLiveActivity(
+          taskTitle: taskTitle,
+          remainingTime: remainingTime,
+          sessionType: sessionType,
+          startedAt: startedAt,
+          pausedAt: pausedAt,
+          duration: duration,
+          isLocked: isLocked
+        )
+      }
     }
   }
 
@@ -120,12 +89,12 @@ import SwiftUI
     duration: Int,
     isLocked: Bool
   ) async {
-    // Create the initial content state with adjusted values to ensure proper initial display
+    // Create the initial content state with current time sync
     let initialContentState = PolmodorLiveActivityAttributes.ContentState(
       taskTitle: taskTitle,
       remainingTime: remainingTime,
       sessionType: sessionType,
-      startedAt: pausedAt == nil ? Date() : nil,  // Only set startedAt if not paused
+      startedAt: startedAt,  // Use the exact start time from timer
       pausedAt: pausedAt,
       duration: duration,
       isLocked: isLocked

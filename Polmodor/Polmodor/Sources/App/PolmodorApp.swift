@@ -65,7 +65,7 @@ struct PolmodorApp: App {
   // Restore app state when coming to foreground
   private func restoreAppState() {
     // Update timer state from LiveActivity when app becomes active
-    timerViewModel.updateFromLiveActivity()
+    //timerViewModel.updateFromLiveActivity()
   }
 }
 

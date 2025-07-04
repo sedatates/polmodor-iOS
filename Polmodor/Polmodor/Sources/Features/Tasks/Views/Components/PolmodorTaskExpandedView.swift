@@ -15,6 +15,7 @@ struct PolmodorTaskExpandedView: View {
   @Binding var isExpanded: Bool
   @Binding var showAddSubtask: Bool
   @EnvironmentObject private var timerViewModel: TimerViewModel
+  @Environment(\.modelContext) private var modelContext
   @State private var showTaskDetail = false
 
   var body: some View {
@@ -54,16 +55,35 @@ struct PolmodorTaskExpandedView: View {
 
           .padding(.bottom, 16)
 
-          Button(action: {
-            print("🔧 View Details button tapped - Empty state")
-            showTaskDetail = true
-          }) {
-            Text("View Details")
-              .font(.subheadline.weight(.medium))
-              .foregroundStyle(.gray)
-              .padding(.vertical, 8)
+          HStack(spacing: 20) {
+            Button(action: {
+              print("🔧 View Details button tapped - Empty state")
+              showTaskDetail = true
+            }) {
+              Text("View Details")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.gray)
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+
+            if !task.completed {
+              Button(action: {
+                completeTask()
+              }) {
+                Text("Complete Task")
+                  .font(.subheadline.weight(.semibold))
+                  .foregroundStyle(.white)
+                  .padding(.horizontal, 16)
+                  .padding(.vertical, 10)
+                  .background(
+                    Capsule()
+                      .fill(.green)
+                  )
+              }
+              .buttonStyle(.plain)
+            }
           }
-          .buttonStyle(.plain)
 
         }
         .frame(maxWidth: .infinity)
@@ -121,6 +141,23 @@ struct PolmodorTaskExpandedView: View {
                 .padding(.vertical, 8)
             }
             .buttonStyle(.plain)
+
+            if !task.completed {
+              Button(action: {
+                completeTask()
+              }) {
+                Text("Complete Task")
+                  .font(.subheadline.weight(.semibold))
+                  .foregroundStyle(.white)
+                  .padding(.horizontal, 16)
+                  .padding(.vertical, 10)
+                  .background(
+                    Capsule()
+                      .fill(.green)
+                  )
+              }
+              .buttonStyle(.plain)
+            }
           }.padding(.horizontal, 16).padding(.bottom, 16)
         }
       }
@@ -135,6 +172,30 @@ struct PolmodorTaskExpandedView: View {
           .navigationBarTitleDisplayMode(.inline)
       }
       .presentationDetents([.large])
+    }
+  }
+
+  private func completeTask() {
+    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+      task.completed = true
+      task.completedAt = Date()
+      task.status = .completed
+
+      // Save to context
+      do {
+        try modelContext.save()
+      } catch {
+        print("❌ Error saving task completion: \(error)")
+      }
+
+      // Haptic feedback
+      #if os(iOS)
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+      #endif
+
+      // Collapse the expanded view
+      isExpanded = false
     }
   }
 }

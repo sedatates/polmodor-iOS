@@ -37,9 +37,7 @@ struct TaskListView: View {
         }
         .presentationDetents([.large])
       }
-      .sheet(isPresented: $viewModel.showSubscriptionPrompt) {
-        SubscriptionView()
-      }
+
       .sheet(isPresented: $viewModel.showFilterSheet) {
         filterBottomSheet
           .presentationDetents([.medium, .large])
@@ -64,7 +62,7 @@ struct TaskListView: View {
       }
     }
     // Modern RevenueCat Paywall Integration
-    .presentPolmodorPaywallWhen(viewModel.showSubscriptionPrompt)
+    .presentPolmodorPaywallWhen(viewModel.showSubscriptionPrompt && !subscriptionManager.isPremium)
     .onChange(of: subscriptionManager.isPremium) { _, isPremium in
       if isPremium {
         // If user became premium, close the subscription prompt and allow adding task
@@ -772,6 +770,7 @@ struct ModernTaskCard: View {
         onSelection()
       }
     }
+    .disabled(showBatchActions)
     .overlay(alignment: .topTrailing) {
       // Selection overlay
       if showBatchActions {

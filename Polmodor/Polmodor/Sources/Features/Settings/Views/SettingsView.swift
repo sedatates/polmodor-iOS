@@ -81,6 +81,8 @@ struct SettingsView: View {
               set: { newValue in
                 settings.workDuration = newValue
                 try? modelContext.save()
+                NotificationCenter.default.post(
+                  name: NSNotification.Name("SettingsChanged"), object: nil)
               }
             ),
             in: 15...60,
@@ -95,6 +97,8 @@ struct SettingsView: View {
               set: { newValue in
                 settings.shortBreakDuration = newValue
                 try? modelContext.save()
+                NotificationCenter.default.post(
+                  name: NSNotification.Name("SettingsChanged"), object: nil)
               }
             ),
             in: 5...15,
@@ -109,6 +113,8 @@ struct SettingsView: View {
               set: { newValue in
                 settings.longBreakDuration = newValue
                 try? modelContext.save()
+                NotificationCenter.default.post(
+                  name: NSNotification.Name("SettingsChanged"), object: nil)
               }
             ),
             in: 10...30,
@@ -123,38 +129,13 @@ struct SettingsView: View {
               set: { newValue in
                 settings.pomodorosUntilLongBreak = newValue
                 try? modelContext.save()
+                NotificationCenter.default.post(name: NSNotification.Name("SettingsChanged"), object: nil)
               }
             ),
             in: 4...10,
             step: 1
           )
           .padding(.vertical, 4)
-        }
-
-        Section("Automation") {
-          Toggle(
-            "Auto-start Breaks",
-            isOn: Binding(
-              get: { settings.autoStartBreaks },
-              set: { newValue in
-                settings.autoStartBreaks = newValue
-                try? modelContext.save()
-              }
-            )
-          )
-          .padding(.vertical, 2)
-
-          Toggle(
-            "Auto-start Pomodoros",
-            isOn: Binding(
-              get: { settings.autoStartPomodoros },
-              set: { newValue in
-                settings.autoStartPomodoros = newValue
-                try? modelContext.save()
-              }
-            )
-          )
-          .padding(.vertical, 2)
         }
 
         Section("Notifications") {

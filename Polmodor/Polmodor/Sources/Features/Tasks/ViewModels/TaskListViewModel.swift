@@ -38,13 +38,16 @@ final class TaskListViewModel: ObservableObject {
   // MARK: - Computed Properties
 
   var categories: [TaskCategory] {
+    // Remove duplicates by name and ID
     var uniqueCategories: [TaskCategory] = []
     var seenIds = Set<UUID>()
+    var seenNames = Set<String>()
 
     for category in allCategories {
-      if !seenIds.contains(category.id) {
+      if !seenIds.contains(category.id) && !seenNames.contains(category.name) {
         uniqueCategories.append(category)
         seenIds.insert(category.id)
+        seenNames.insert(category.name)
       }
     }
     return uniqueCategories.sorted { $0.name < $1.name }

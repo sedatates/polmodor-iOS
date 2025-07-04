@@ -28,7 +28,7 @@ final class TimerViewModel: ObservableObject {
   private var timer: AnyCancellable?
   private var modelContext: ModelContext?
   private var settingsCancellable: AnyCancellable?
-  
+
   // Timer state tracking
   private var originalDuration: TimeInterval = 0
   private var sessionStartedAt: Date?
@@ -93,12 +93,14 @@ final class TimerViewModel: ObservableObject {
   }
 
   private func observeSettingsChanges() {
-    settingsCancellable = NotificationCenter.default.publisher(for: NSNotification.Name("SettingsChanged"))
-      .sink { [weak self] _ in
-        Task { @MainActor in
-          self?.handleSettingsChange()
-        }
+    settingsCancellable = NotificationCenter.default.publisher(
+      for: NSNotification.Name("SettingsChanged")
+    )
+    .sink { [weak self] _ in
+      Task { @MainActor in
+        self?.handleSettingsChange()
       }
+    }
   }
 
   private func handleSettingsChange() {
@@ -144,16 +146,30 @@ final class TimerViewModel: ObservableObject {
     self.sessionStartedAt = savedStartedAt
     self.sessionPausedAt = savedPausedAt
     self.timeElapsedBeforePause = savedTimeElapsedBeforePause
-    
+
     // Set original duration
     self.originalDuration = savedState.duration
-    
-    // Handle different timer states
+
+    // Handle different timer states more safely
     if savedIsRunning && savedTimeRemaining > 0 {
-      // Timer was running and has time left
-      self.timeRemaining = savedTimeRemaining
-      self.isRunning = false // Will be started by UI
-      print("🟢 Timer restored with \(Int(savedTimeRemaining))s remaining")
+      // Calculate actual remaining time based on when timer was started
+      if let startedAt = savedStartedAt {
+        let elapsedSinceStart = Date().timeIntervalSince(startedAt)
+        let actualRemaining = max(0, originalDuration - elapsedSinceStart)
+
+        if actualRemaining > 0 {
+          self.timeRemaining = actualRemaining
+          self.isRunning = false  // Will be started by UI
+          print("🟢 Timer restored with \(Int(actualRemaining))s remaining")
+        } else {
+          // Timer completed while app was closed
+          handleTimerCompletionFromBackground()
+        }
+      } else {
+        // No start time, use saved remaining time
+        self.timeRemaining = savedTimeRemaining
+        self.isRunning = false
+      }
     } else if savedIsRunning && savedTimeRemaining <= 0 {
       // Timer completed while app was closed
       handleTimerCompletionFromBackground()
@@ -162,7 +178,7 @@ final class TimerViewModel: ObservableObject {
       self.timeRemaining = savedTimeRemaining > 0 ? savedTimeRemaining : savedState.duration
       self.isRunning = false
     }
-    
+
     // Calculate progress
     updateProgress()
   }
@@ -170,22 +186,25 @@ final class TimerViewModel: ObservableObject {
   /// Handle timer completion when app was closed
   private func handleTimerCompletionFromBackground() {
     print("🟢 Handling timer completion from background")
-    
+
     // Mark as completed
     if state == .work {
       completedPomodoros += 1
-      
+
       if let subtaskID = activeSubtaskID {
         incrementSubtaskPomodoro(subtaskID: subtaskID)
       }
+
+      // Statistics'e kaydet
+      saveCompletedPomodoroToStatistics()
     }
 
     // Transition to next state
     transitionToNextState()
-    
+
     // Reset timer for new state
     resetTimerForNewState()
-    
+
     // Save the new state
     saveTimerState()
   }
@@ -193,7 +212,7 @@ final class TimerViewModel: ObservableObject {
   /// Update timer from LiveActivity when app comes to foreground
   func updateFromLiveActivity() {
     restoreTimerState()
-    
+
     // Update Live Activity to sync with current app state
     if isRunning || timeRemaining > 0 {
       startNewLiveActivity()
@@ -212,7 +231,7 @@ final class TimerViewModel: ObservableObject {
 
   func startTimer() {
     guard !isRunning else { return }
-    
+
     // Set up timer state
     if sessionStartedAt == nil {
       // Starting fresh
@@ -223,10 +242,10 @@ final class TimerViewModel: ObservableObject {
       let pauseDuration = Date().timeIntervalSince(sessionPausedAt!)
       sessionStartedAt = sessionStartedAt!.addingTimeInterval(pauseDuration)
     }
-    
+
     sessionPausedAt = nil
     isRunning = true
-    
+
     // Start the UI timer
     timer = Timer.publish(every: 1, on: .main, in: .common)
       .autoconnect()
@@ -237,33 +256,34 @@ final class TimerViewModel: ObservableObject {
     updateActiveTaskStatus(isRunning: true)
     startNewLiveActivity()
     saveTimerState()
-    
+
     print("🟢 Timer started - duration: \(Int(originalDuration))s")
   }
 
   func pauseTimer() {
     guard isRunning else { return }
-    
+
     isRunning = false
     timer?.cancel()
-    
+
     // Calculate elapsed time before pause
     if let startedAt = sessionStartedAt {
       timeElapsedBeforePause = Date().timeIntervalSince(startedAt)
     }
-    
+
     sessionPausedAt = Date()
-    
+
     updateActiveTaskStatus(isRunning: false)
-    updateLiveActivityPause()
+    // Stop tuşuna basıldığında LiveActivity'yi sonlandır
+    LiveActivityManager.shared.endLiveActivity()
     saveTimerState()
-    
+
     print("🟡 Timer paused - elapsed: \(Int(timeElapsedBeforePause))s")
   }
 
   func resetTimer() {
     pauseTimer()
-    
+
     // Reset all timer state
     timeRemaining = state.duration
     originalDuration = state.duration
@@ -271,20 +291,20 @@ final class TimerViewModel: ObservableObject {
     sessionStartedAt = nil
     sessionPausedAt = nil
     timeElapsedBeforePause = 0
-    
+
     saveTimerState()
     LiveActivityManager.shared.endLiveActivity()
-    
+
     print("🔄 Timer reset")
   }
 
   func skipToNext() {
     let wasWorkSession = state == .work
-    
+
     // Handle completion if it was a work session
     if wasWorkSession {
       completedPomodoros += 1
-      
+
       if let subtaskID = activeSubtaskID {
         incrementSubtaskPomodoro(subtaskID: subtaskID)
       }
@@ -292,18 +312,18 @@ final class TimerViewModel: ObservableObject {
 
     // Transition to next state
     transitionToNextState()
-    
+
     // Reset timer for new state
     resetTimerForNewState()
-    
+
     // Auto-start if it was running
     if isRunning {
       startTimer()
     }
-    
+
     saveTimerState()
     startNewLiveActivity()
-    
+
     print("⏭️ Skipped to next: \(state.rawValue)")
   }
 
@@ -314,17 +334,17 @@ final class TimerViewModel: ObservableObject {
       handleTimerCompletion()
       return
     }
-    
-    let totalElapsed = Date().timeIntervalSince(startedAt)
+
+    let totalElapsed = Date().timeIntervalSince(startedAt) * 10
     timeRemaining = max(0, originalDuration - totalElapsed)
-    
+
     updateProgress()
-    
+
     // Save state periodically
     if Int(timeRemaining) % 15 == 0 {
       saveTimerState()
     }
-    
+
     // Check completion
     if timeRemaining <= 0 {
       handleTimerCompletion()
@@ -335,7 +355,7 @@ final class TimerViewModel: ObservableObject {
     pauseTimer()
     timeRemaining = 0
     progress = 1
-    
+
     // Haptic feedback
     #if os(iOS)
       let generator = UINotificationFeedbackGenerator()
@@ -345,10 +365,13 @@ final class TimerViewModel: ObservableObject {
     // Handle work session completion
     if state == .work {
       completedPomodoros += 1
-      
+
       if let subtaskID = activeSubtaskID {
         incrementSubtaskPomodoro(subtaskID: subtaskID)
       }
+
+      // Statistics'e kaydet
+      saveCompletedPomodoroToStatistics()
     }
 
     // Schedule notification
@@ -357,20 +380,16 @@ final class TimerViewModel: ObservableObject {
     // Auto-transition after delay
     Task {
       try? await Task.sleep(for: .seconds(2))
-      
+
       await MainActor.run {
         transitionToNextState()
         resetTimerForNewState()
-        
-        // Auto-start breaks
-        if state != .work {
-          startTimer()
-        } else {
-          startNewLiveActivity()
-        }
+
+        // Update live activity but don't auto-start
+        startNewLiveActivity()
       }
     }
-    
+
     print("✅ Timer completed: \(state.rawValue)")
   }
 
@@ -436,6 +455,31 @@ final class TimerViewModel: ObservableObject {
       activeSubtaskTitle = nil
     }
   }
+  
+  private func selectNextAvailableSubtask() {
+    guard let modelContext = modelContext else { return }
+    
+    do {
+      // Tüm incomplete subtask'ları getir
+      let descriptor = FetchDescriptor<PolmodorSubTask>(
+        predicate: #Predicate { $0.pomodoroCompleted < $0.pomodoroTotal }
+      )
+      
+      let availableSubtasks = try modelContext.fetch(descriptor)
+      
+      if let nextSubtask = availableSubtasks.first {
+        // Yeni subtask seç
+        setActiveSubtask(nextSubtask.id, title: nextSubtask.title)
+        print("🔄 Selected next subtask: \(nextSubtask.title)")
+      } else {
+        // Hiç subtask kalmadı
+        setActiveSubtask(nil, title: nil)
+        print("✅ All subtasks completed!")
+      }
+    } catch {
+      print("❌ Error selecting next subtask: \(error)")
+    }
+  }
 
   // MARK: - Live Activity Methods
 
@@ -453,9 +497,18 @@ final class TimerViewModel: ObservableObject {
     case .longBreak: sessionType = .longBreak
     }
 
+    // Calculate accurate remaining time for live activity sync
+    let accurateRemainingTime: Int
+    if isRunning, let startedAt = sessionStartedAt {
+      let elapsed = Date().timeIntervalSince(startedAt)
+      accurateRemainingTime = max(0, Int(originalDuration - elapsed))
+    } else {
+      accurateRemainingTime = remainingTimeSeconds
+    }
+
     LiveActivityManager.shared.startLiveActivity(
       taskTitle: taskTitle,
-      remainingTime: remainingTimeSeconds,
+      remainingTime: accurateRemainingTime,
       sessionType: sessionType,
       startedAt: isRunning ? sessionStartedAt : nil,
       pausedAt: isRunning ? nil : sessionPausedAt,
@@ -463,16 +516,7 @@ final class TimerViewModel: ObservableObject {
       isLocked: false
     )
 
-    print("✅ Started new Live Activity: \(taskTitle), \(remainingTimeSeconds)s remaining")
-  }
-
-  private func updateLiveActivityPause() {
-    guard supportsLiveActivity else { return }
-
-    LiveActivityManager.shared.updateLiveActivity(
-      remainingTime: Int(timeRemaining),
-      pausedAt: sessionPausedAt
-    )
+    print("✅ Started new Live Activity: \(taskTitle), \(accurateRemainingTime)s remaining")
   }
 
   // MARK: - Notification Methods
@@ -480,7 +524,8 @@ final class TimerViewModel: ObservableObject {
   private func scheduleCompletionNotification() {
     if SettingsManager.shared.isNotificationsEnabled {
       let title = "\(state.title) Completed!"
-      let message = state == .work ? "Great job! Time for a break." : "Break finished! Ready to focus?"
+      let message =
+        state == .work ? "Great job! Time for a break." : "Break finished! Ready to focus?"
 
       NotificationManager.shared.scheduleTimerCompletionNotification(
         title: title,
@@ -492,15 +537,71 @@ final class TimerViewModel: ObservableObject {
   // MARK: - Helper Methods
 
   private func incrementSubtaskPomodoro(subtaskID: UUID) {
+    guard let modelContext = modelContext else { return }
+
+    do {
+      let descriptor = FetchDescriptor<PolmodorSubTask>(
+        predicate: #Predicate { $0.id == subtaskID }
+      )
+
+      if let subtask = try modelContext.fetch(descriptor).first {
+        subtask.pomodoroCompleted += 1
+
+        // Parent task'ın pomodoro sayısını da artır
+        if let task = subtask.task {
+          task.incrementPomodoro()
+        }
+
+        try modelContext.save()
+        print("✅ Pomodoro incremented for subtask: \(subtask.title)")
+      }
+    } catch {
+      print("❌ Error incrementing subtask pomodoro: \(error)")
+    }
+
     #if os(iOS)
       let generator = UIImpactFeedbackGenerator(style: .medium)
       generator.impactOccurred()
     #endif
-    print("✅ Pomodoro increment for subtask: \(subtaskID)")
   }
 
   private func updateActiveTaskStatus(isRunning: Bool) {
     print("✅ Task status update: \(isRunning ? "running" : "stopped")")
+  }
+
+  private func saveCompletedPomodoroToStatistics() {
+    guard let modelContext = modelContext else { return }
+
+    do {
+      let calendar = Calendar.current
+      let today = calendar.startOfDay(for: Date())
+      let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
+
+      let descriptor = FetchDescriptor<StatisticsModel>(
+        predicate: #Predicate { $0.date >= today && $0.date < tomorrow }
+      )
+
+      let todayStats = try modelContext.fetch(descriptor).first
+
+      if let existingStats = todayStats {
+        // Bugün için kayıt var, güncelle
+        existingStats.completedPomodoros += 1
+        existingStats.totalFocusTime += originalDuration
+      } else {
+        // Yeni kayıt oluştur
+        let newStats = StatisticsModel(
+          date: today,
+          completedPomodoros: 1,
+          totalFocusTime: originalDuration
+        )
+        modelContext.insert(newStats)
+      }
+
+      try modelContext.save()
+      print("✅ Statistics updated: +1 pomodoro, +\(Int(originalDuration/60)) min focus time")
+    } catch {
+      print("❌ Error saving statistics: \(error)")
+    }
   }
 
   // MARK: - App Intent Notification Handlers

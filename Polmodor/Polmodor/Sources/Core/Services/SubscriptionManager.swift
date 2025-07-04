@@ -2,6 +2,7 @@ import Foundation
 import RevenueCat
 import RevenueCatUI
 import SwiftUI
+import UIKit
 
 @Observable final class SubscriptionManager {
   static let shared = SubscriptionManager()
@@ -12,11 +13,13 @@ import SwiftUI
   var offerings: Offerings?
 
   // MARK: - Constants
-  private let premiumEntitlementID = "premium"
+  private let premiumEntitlementID = "Premium"
+    
 
   private init() {
     setupRevenueCat()
     checkSubscriptionStatus()
+    setupNotificationObservers()
   }
 
   // MARK: - RevenueCat Setup
@@ -40,11 +43,46 @@ import SwiftUI
         let customerInfo = try await Purchases.shared.customerInfo()
         await MainActor.run {
           self.customerInfo = customerInfo
+          let wasPremium = self.isPremium
           self.isPremium = customerInfo.entitlements[premiumEntitlementID]?.isActive == true
+
+          print("🔄 Subscription status checked - isPremium: \(self.isPremium)")
+          if let entitlement = customerInfo.entitlements[premiumEntitlementID] {
+            print(
+              "📱 Premium entitlement found: active=\(entitlement.isActive), expires=\(entitlement.expirationDate?.description ?? "never")"
+            )
+          } else {
+            print("📱 No premium entitlement found")
+          }
+
+          if wasPremium != self.isPremium {
+            print("✅ Premium status changed from \(wasPremium) to \(self.isPremium)")
+            // Post notification about subscription status change
+            NotificationCenter.default.post(
+              name: .subscriptionStatusChanged, object: self.isPremium)
+          }
         }
       } catch {
         print("❌ Error checking subscription status: \(error)")
       }
+    }
+  }
+
+  /// Force refresh subscription status (useful after restore or when needed)
+  func forceRefreshSubscriptionStatus() {
+    print("🔄 Force refreshing subscription status...")
+    checkSubscriptionStatus()
+  }
+
+  // MARK: - Notification Observers
+  private func setupNotificationObservers() {
+    NotificationCenter.default.addObserver(
+      forName: UIApplication.didBecomeActiveNotification,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      print("📱 App became active, refreshing subscription status")
+      self?.checkSubscriptionStatus()
     }
   }
 
@@ -91,13 +129,30 @@ import SwiftUI
   func onPaywallPurchaseCompleted(customerInfo: CustomerInfo) {
     Task { @MainActor in
       self.customerInfo = customerInfo
+      let wasPremium = self.isPremium
       self.isPremium = customerInfo.entitlements[premiumEntitlementID]?.isActive == true
+
+      print("🔄 Paywall purchase completed - isPremium: \(self.isPremium)")
+      if let entitlement = customerInfo.entitlements[premiumEntitlementID] {
+        print(
+          "📱 Premium entitlement after purchase: active=\(entitlement.isActive), expires=\(entitlement.expirationDate?.description ?? "never")"
+        )
+      }
 
       // Provide haptic feedback
       let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
       impactFeedback.impactOccurred()
 
-      print("✅ Premium subscription activated!")
+      if isPremium {
+        print("✅ Premium subscription activated!")
+        // Force a UI update by notifying observers
+      }
+
+      if wasPremium != self.isPremium {
+        print("✅ Premium status changed from \(wasPremium) to \(self.isPremium)")
+        // Post notification about subscription status change
+        NotificationCenter.default.post(name: Notification.Name("subscriptionStatusChanged"), object: self.isPremium)
+      }
     }
   }
 
@@ -105,10 +160,30 @@ import SwiftUI
   func onPaywallRestoreCompleted(customerInfo: CustomerInfo) {
     Task { @MainActor in
       self.customerInfo = customerInfo
+      let wasPremium = self.isPremium
       self.isPremium = customerInfo.entitlements[premiumEntitlementID]?.isActive == true
+
+      print("🔄 Paywall restore completed - isPremium: \(self.isPremium)")
+      if let entitlement = customerInfo.entitlements[premiumEntitlementID] {
+        print(
+          "📱 Premium entitlement after restore: active=\(entitlement.isActive), expires=\(entitlement.expirationDate?.description ?? "never")"
+        )
+      } else {
+        print("📱 No premium entitlement found after restore")
+      }
 
       if isPremium {
         print("✅ Premium subscription restored!")
+        // Force a UI update by notifying observers
+      } else {
+        print("⚠️ Restore completed but premium not active")
+      }
+
+      if wasPremium != self.isPremium {
+        print("✅ Premium status changed from \(wasPremium) to \(self.isPremium)")
+        // Post notification about subscription status change
+        NotificationCenter.default.post(
+          name: Notification.Name("subscriptionStatusChanged"), object: self.isPremium)
       }
     }
   }
@@ -244,4 +319,9 @@ enum SubscriptionStatus {
       return true
     }
   }
+}
+
+// MARK: - Notification Names
+extension Notification.Name {
+  static let subscriptionStatusChanged = Notification.Name("subscriptionStatusChanged")
 }

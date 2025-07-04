@@ -136,7 +136,7 @@ extension PolmodorTask {
       PolmodorTask(
         id: UUID(),
         title: "iOS App Development",
-        taskDescription: "Complete the Polmodor app features",
+        taskDescription: "Complete the Polmodor app features and improve productivity",
         iconName: "iphone",
         category: TaskCategory.defaultCategories[0],
         priority: .high,
@@ -148,86 +148,24 @@ extension PolmodorTask {
         subTasks: [
           PolmodorSubTask(
             id: UUID(),
-            title: "Implement Task List",
-            completed: true,
-            pomodoro: .init(total: 4, completed: 2)
-          ),
-          PolmodorSubTask(
-            id: UUID(),
-            title: "Add Timer Feature",
-            completed: false,
-            pomodoro: .init(total: 3, completed: 1)
-          ),
-        ]
-      ),
-      PolmodorTask(
-        id: UUID(),
-        title: "Study SwiftUI",
-        taskDescription: "Learn advanced SwiftUI concepts",
-        iconName: "book.fill",
-        category: TaskCategory.defaultCategories[1],
-        priority: .medium,
-        timeSpent: 60,
-        timeRemaining: 180,
-        dueDate: Date().addingTimeInterval(86400 * 3),
-        completed: false,
-        isTimerRunning: false,
-        subTasks: [
-          PolmodorSubTask(
-            id: UUID(),
-            title: "Animations",
-            completed: false,
-            pomodoro: .init(total: 2, completed: 1)
-          ),
-          PolmodorSubTask(
-            id: UUID(),
-            title: "Core Data",
+            title: "Design User Interface",
             completed: false,
             pomodoro: .init(total: 3, completed: 0)
           ),
-        ]
-      ),
-      PolmodorTask(
-        id: UUID(),
-        title: "Go for a Run",
-        taskDescription: "Exercise regularly to maintain health",
-        iconName: "person.running",
-        category: TaskCategory.defaultCategories[2],
-        priority: .low,
-        timeSpent: 30,
-        timeRemaining: 150,
-        dueDate: Date().addingTimeInterval(86400 * 5),
-        completed: false,
-        isTimerRunning: false,
-        subTasks: []
-      ),
-      PolmodorTask(
-        id: UUID(),
-        title: "Go for a Run",
-        taskDescription: "Exercise regularly to maintain health",
-        iconName: "person.running",
-        category: TaskCategory.defaultCategories[2],
-        priority: .low,
-        timeSpent: 30,
-        timeRemaining: 150,
-        dueDate: Date().addingTimeInterval(86400 * 5),
-        completed: false,
-        isTimerRunning: false,
-        subTasks: [
           PolmodorSubTask(
             id: UUID(),
-            title: "Morning Run",
+            title: "Implement Timer Logic",
             completed: false,
-            pomodoro: .init(total: 2, completed: 0)
+            pomodoro: .init(total: 4, completed: 1)
           ),
           PolmodorSubTask(
             id: UUID(),
-            title: "Evening Run",
+            title: "Add Statistics Feature",
             completed: false,
             pomodoro: .init(total: 2, completed: 0)
           ),
         ]
-      ),
+      )
     ]
   }
 }

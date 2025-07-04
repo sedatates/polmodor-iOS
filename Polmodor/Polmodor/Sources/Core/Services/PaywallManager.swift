@@ -32,12 +32,26 @@ import UIKit
 
   /// Handles successful purchase completion
   func handlePurchaseCompleted(customerInfo: CustomerInfo) {
+    print("💳 PaywallManager: Purchase completed")
     subscriptionManager.onPaywallPurchaseCompleted(customerInfo: customerInfo)
+
+    // Force refresh after a short delay to ensure UI updates
+    Task {
+      try? await Task.sleep(for: .seconds(0.5))
+      subscriptionManager.forceRefreshSubscriptionStatus()
+    }
   }
 
   /// Handles successful restore completion
   func handleRestoreCompleted(customerInfo: CustomerInfo) {
+    print("🔄 PaywallManager: Restore completed")
     subscriptionManager.onPaywallRestoreCompleted(customerInfo: customerInfo)
+
+    // Force refresh after a short delay to ensure UI updates
+    Task {
+      try? await Task.sleep(for: .seconds(0.5))
+      subscriptionManager.forceRefreshSubscriptionStatus()
+    }
   }
 }
 
@@ -47,7 +61,7 @@ extension View {
   /// Presents RevenueCat paywall if user doesn't have premium entitlement
   func presentPolmodorPaywallIfNeeded() -> some View {
     self.presentPaywallIfNeeded(
-      requiredEntitlementIdentifier: "premium",
+      requiredEntitlementIdentifier: "Premium",
       purchaseCompleted: { customerInfo in
         PaywallManager.shared.handlePurchaseCompleted(customerInfo: customerInfo)
       },

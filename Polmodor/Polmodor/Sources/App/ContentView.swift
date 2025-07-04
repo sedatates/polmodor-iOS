@@ -19,6 +19,7 @@ struct ContentView: View {
     .presentPolmodorPaywallIfNeeded()
     .onAppear {
       // Check subscription status when app appears
+      print("📱 ContentView appeared, checking subscription status")
       subscriptionManager.checkSubscriptionStatus()
     }
   }

@@ -38,11 +38,14 @@ struct PolmodorWidgetLiveActivity: Widget {
       } minimal: {
         MinimalView(context: context)
       }
-      .keylineTint(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+      .keylineTint(
+        stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
     }
   }
-  
-  private func stateColor(for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool) -> Color {
+
+  private func stateColor(
+    for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+  ) -> Color {
     if isPaused { return .orange }
     switch sessionType {
     case .work: return .red
@@ -55,30 +58,41 @@ struct PolmodorWidgetLiveActivity: Widget {
 // MARK: - Compact Views
 struct CompactLeadingView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   var body: some View {
-    Image(systemName: sessionIcon(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-      .font(.system(size: 16, weight: .semibold))
-      .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-      .symbolEffect(.pulse, options: .repeating, isActive: context.state.pausedAt == nil)
+    Image(
+      systemName: sessionIcon(
+        for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+    )
+    .font(.system(size: 16, weight: .semibold))
+    .foregroundStyle(
+      stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+    )
+    .symbolEffect(.pulse, options: .repeating, isActive: context.state.pausedAt == nil)
   }
 }
 
 struct CompactTrailingView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   var body: some View {
-    if context.state.pausedAt == nil && context.state.startedAt != nil {
+    // Timer running ve paused değil ise .timer style kullan
+    if context.state.startedAt != nil && context.state.pausedAt == nil {
+      // Timer style kullan
       Text(timerDate(from: context.state), style: .timer)
         .font(.system(size: 16, weight: .bold, design: .rounded))
         .monospacedDigit()
-        .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-        .contentTransition(.numericText())
+        .foregroundStyle(
+          stateColor(for: context.state.sessionType, isPaused: false)
+        )
     } else {
-      Text("\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))")
+      // Normal text göster
+      Text(formatTime(context.state.remainingTime))
         .font(.system(size: 16, weight: .bold, design: .rounded))
         .monospacedDigit()
-        .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+        .foregroundStyle(
+          stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+        )
         .contentTransition(.numericText())
     }
   }
@@ -87,19 +101,25 @@ struct CompactTrailingView: View {
 // MARK: - Minimal View
 struct MinimalView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   var body: some View {
-    if context.state.pausedAt == nil && context.state.startedAt != nil {
+    // Timer running ve paused değil ise .timer style kullan
+    if context.state.startedAt != nil && context.state.pausedAt == nil {
+      // Timer style kullan
       Text(timerDate(from: context.state), style: .timer)
         .font(.system(size: 14, weight: .bold, design: .rounded))
         .monospacedDigit()
-        .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-        .contentTransition(.numericText())
+        .foregroundStyle(
+          stateColor(for: context.state.sessionType, isPaused: false)
+        )
     } else {
-      Text("\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))")
+      // Normal text göster
+      Text(formatTime(context.state.remainingTime))
         .font(.system(size: 14, weight: .bold, design: .rounded))
         .monospacedDigit()
-        .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+        .foregroundStyle(
+          stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+        )
         .contentTransition(.numericText())
     }
   }
@@ -108,9 +128,9 @@ struct MinimalView: View {
 // MARK: - Expanded Views
 struct ExpandedLeadingView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   private var isCompleted: Bool { context.state.remainingTime <= 0 }
-  
+
   var body: some View {
     VStack(spacing: 4) {
       if isCompleted {
@@ -119,12 +139,18 @@ struct ExpandedLeadingView: View {
           .foregroundStyle(.green)
           .symbolEffect(.bounce, value: isCompleted)
       } else {
-        Image(systemName: sessionIcon(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-          .font(.system(size: 24, weight: .bold))
-          .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil).gradient)
-          .symbolEffect(.pulse, options: .repeating, isActive: context.state.pausedAt == nil)
+        Image(
+          systemName: sessionIcon(
+            for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+        )
+        .font(.system(size: 24, weight: .bold))
+        .foregroundStyle(
+          stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+            .gradient
+        )
+        .symbolEffect(.pulse, options: .repeating, isActive: context.state.pausedAt == nil)
       }
-      
+
       Text(sessionLabel(for: context.state.sessionType))
         .font(.system(size: 10, weight: .medium))
         .foregroundStyle(.secondary)
@@ -135,23 +161,29 @@ struct ExpandedLeadingView: View {
 
 struct ExpandedTrailingView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   var body: some View {
     VStack(spacing: 4) {
-      if context.state.pausedAt == nil && context.state.startedAt != nil {
+      // Timer running ve paused değil ise .timer style kullan
+      if context.state.startedAt != nil && context.state.pausedAt == nil {
+        // Timer style kullan
         Text(timerDate(from: context.state), style: .timer)
           .font(.system(size: 20, weight: .bold, design: .rounded))
           .monospacedDigit()
-          .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-          .contentTransition(.numericText())
+          .foregroundStyle(
+            stateColor(for: context.state.sessionType, isPaused: false)
+          )
       } else {
-        Text("\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))")
+        // Normal text göster
+        Text(formatTime(context.state.remainingTime))
           .font(.system(size: 20, weight: .bold, design: .rounded))
           .monospacedDigit()
-          .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+          .foregroundStyle(
+            stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+          )
           .contentTransition(.numericText())
       }
-      
+
       if context.state.pausedAt != nil {
         Text("Paused")
           .font(.system(size: 10, weight: .medium))
@@ -167,7 +199,7 @@ struct ExpandedTrailingView: View {
 
 struct ExpandedCenterView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   var body: some View {
     Button {
       Task { try? await OpenAppIntent().perform() }
@@ -185,7 +217,7 @@ struct ExpandedCenterView: View {
 
 struct ExpandedBottomView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   var body: some View {
     Button {
       Task { try? await OpenAppIntent().perform() }
@@ -205,41 +237,53 @@ struct ExpandedBottomView: View {
 // MARK: - Dynamic Island Live Activity View
 struct DynamicIslandLiveActivityView: View {
   let context: ActivityViewContext<PolmodorLiveActivityAttributes>
-  
+
   var body: some View {
     VStack(spacing: 12) {
       HStack {
-        Image(systemName: sessionIcon(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-          .font(.system(size: 20, weight: .semibold))
-          .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
-        
+        Image(
+          systemName: sessionIcon(
+            for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+        )
+        .font(.system(size: 20, weight: .semibold))
+        .foregroundStyle(
+          stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+
         VStack(alignment: .leading, spacing: 2) {
           Text(context.state.taskTitle.isEmpty ? "Polmodor Timer" : context.state.taskTitle)
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(.primary)
             .lineLimit(1)
-          
+
           Text(sessionLabel(for: context.state.sessionType))
             .font(.system(size: 12, weight: .medium))
-            .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+            .foregroundStyle(
+              stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
         }
-        
+
         Spacer()
-        
-        if context.state.pausedAt == nil && context.state.startedAt != nil {
+
+        // Timer running ve paused değil ise .timer style kullan
+        if context.state.startedAt != nil && context.state.pausedAt == nil {
+          // Timer style kullan
           Text(timerDate(from: context.state), style: .timer)
             .font(.system(size: 18, weight: .bold, design: .rounded))
             .monospacedDigit()
-            .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+            .foregroundStyle(
+              stateColor(for: context.state.sessionType, isPaused: false)
+            )
         } else {
-          Text("\(context.state.remainingTime / 60):\(String(format: "%02d", context.state.remainingTime % 60))")
+          // Normal text göster
+          Text(formatTime(context.state.remainingTime))
             .font(.system(size: 18, weight: .bold, design: .rounded))
             .monospacedDigit()
-            .foregroundStyle(stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil))
+            .foregroundStyle(
+              stateColor(for: context.state.sessionType, isPaused: context.state.pausedAt != nil)
+            )
             .contentTransition(.numericText())
         }
       }
-      
+
       Button {
         Task { try? await OpenAppIntent().perform() }
       } label: {
@@ -259,7 +303,9 @@ struct DynamicIslandLiveActivityView: View {
 
 // MARK: - Helper Functions
 extension View {
-  func stateColor(for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool) -> Color {
+  func stateColor(
+    for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+  ) -> Color {
     if isPaused { return .orange }
     switch sessionType {
     case .work: return .red
@@ -267,8 +313,10 @@ extension View {
     case .longBreak: return .blue
     }
   }
-  
-  func sessionIcon(for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool) -> String {
+
+  func sessionIcon(
+    for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType, isPaused: Bool
+  ) -> String {
     if isPaused { return "pause.circle.fill" }
     switch sessionType {
     case .work: return "timer.circle.fill"
@@ -276,21 +324,29 @@ extension View {
     case .longBreak: return "cup.and.saucer.fill"
     }
   }
-  
-  func sessionLabel(for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType) -> String {
+
+  func sessionLabel(for sessionType: PolmodorLiveActivityAttributes.ContentState.SessionType)
+    -> String
+  {
     switch sessionType {
     case .work: return "Focus"
     case .shortBreak: return "Short Break"
     case .longBreak: return "Long Break"
     }
   }
-  
+
   func timerDate(from state: PolmodorLiveActivityAttributes.ContentState) -> Date {
     if let startedAt = state.startedAt, state.pausedAt == nil {
       return startedAt.addingTimeInterval(TimeInterval(state.duration))
     } else {
       return Date().addingTimeInterval(TimeInterval(state.remainingTime))
     }
+  }
+
+  func formatTime(_ seconds: Int) -> String {
+    let minutes = seconds / 60
+    let remainingSeconds = seconds % 60
+    return String(format: "%02d:%02d", minutes, remainingSeconds)
   }
 }
 
@@ -306,7 +362,7 @@ struct PolmodorWidgetLiveActivity_Previews: PreviewProvider {
     duration: 1500,
     isLocked: false
   )
-  
+
   static var previews: some View {
     attributes
       .previewContext(contentState, viewKind: .dynamicIsland(.compact))
