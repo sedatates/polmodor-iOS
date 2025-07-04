@@ -8,7 +8,7 @@ struct TimerCircleView: View {
     let pomodoroState: PomodoroState
     
     @State private var rotationAngle: Double = 0
-    @State private var previousProgress: Double = 0
+    @State private var timer: Timer?
     
     private let circleRadius: CGFloat = UIScreen.screenWidth / 2 // Half of the screen width
     private let circleWidth: CGFloat = UIScreen.screenWidth  // Width of the circle minus padding
@@ -35,17 +35,20 @@ struct TimerCircleView: View {
             height: UIScreen.screenWidth
         )
 
-        .onChange(of: progress) { oldValue, newValue in
-            withAnimation(.easeInOut(duration: 0.5)) {
-                rotationAngle += 6
+        .onChange(of: isRunning) { oldValue, newValue in
+            if newValue {
+                startRotation()
+            } else {
+                stopRotation()
             }
         }
-        .onChange(of: isRunning) { oldValue, newValue in
-            if newValue && progress > 0 {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    rotationAngle = (progress - previousProgress) * 360.0
-                }
+        .onAppear {
+            if isRunning {
+                startRotation()
             }
+        }
+        .onDisappear {
+            stopRotation()
         }
     }
     
@@ -115,6 +118,20 @@ struct TimerCircleView: View {
         let minutes = Int(timeRemaining) / 60
         let seconds = Int(timeRemaining) % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    private func startRotation() {
+        stopRotation() // Önce mevcut timer'ı durdur
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            withAnimation(.easeOut(duration: 0.2)) {
+                rotationAngle += 6 // 360 degrees / 60 segments = 6 degrees per second
+            }
+        }
+    }
+    
+    private func stopRotation() {
+        timer?.invalidate()
+        timer = nil
     }
 }
 

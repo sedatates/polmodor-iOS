@@ -10,6 +10,8 @@
 		5913E9332D74EB0900EB08BA /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5913E9142D74EADD00EB08BA /* WidgetKit.framework */; };
 		5913E9342D74EB0900EB08BA /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5913E9162D74EADD00EB08BA /* SwiftUI.framework */; };
 		5913E9452D74EB0900EB08BA /* PolmodorWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5913E9322D74EB0900EB08BA /* PolmodorWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		59A6F5C42E185F2A00B06277 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 59A6F5C32E185F2A00B06277 /* RevenueCat */; };
+		59A6F5C62E185F2A00B06277 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 59A6F5C52E185F2A00B06277 /* RevenueCatUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,7 +43,6 @@
 		5913E9162D74EADD00EB08BA /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		5913E9322D74EB0900EB08BA /* PolmodorWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PolmodorWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		59F84D202D6495F30099E619 /* Polmodor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Polmodor.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		76D52EC7A611697C74112283 /* Pods_Polmodor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Polmodor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -94,6 +95,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				59A6F5C62E185F2A00B06277 /* RevenueCatUI in Frameworks */,
+				59A6F5C42E185F2A00B06277 /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,7 +125,6 @@
 		F242B28E895C074F3145478D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				76D52EC7A611697C74112283 /* Pods_Polmodor.framework */,
 				5913E9142D74EADD00EB08BA /* WidgetKit.framework */,
 				5913E9162D74EADD00EB08BA /* SwiftUI.framework */,
 			);
@@ -148,8 +150,6 @@
 				5913E9352D74EB0900EB08BA /* PolmodorWidget */,
 			);
 			name = PolmodorWidgetExtension;
-			packageProductDependencies = (
-			);
 			productName = PolmodorWidgetExtension;
 			productReference = 5913E9322D74EB0900EB08BA /* PolmodorWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -203,6 +203,9 @@
 			);
 			mainGroup = 59F84D172D6495F30099E619;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				59A6F5C22E185EB100B06277 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 59F84D212D6495F30099E619 /* Products */;
 			projectDirPath = "";
@@ -523,6 +526,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		59A6F5C22E185EB100B06277 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.31.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		59A6F5C32E185F2A00B06277 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59A6F5C22E185EB100B06277 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		59A6F5C52E185F2A00B06277 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 59A6F5C22E185EB100B06277 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 59F84D182D6495F30099E619 /* Project object */;
 }

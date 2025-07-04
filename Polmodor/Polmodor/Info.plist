@@ -20,5 +20,14 @@
 			<key>MaximumAlertCount</key>
 			<integer>5</integer>
 		</dict>
+		<key>NSUserTrackingUsageDescription</key>
+		<string>Bu uygulama daha iyi reklam deneyimi sunabilmek için takip izni talep ediyor.</string>
+		<key>SKAdNetworkItems</key>
+		<array>
+			<dict>
+				<key>SKAdNetworkIdentifier</key>
+				<string>cstr6suwn9.skadnetwork</string>
+			</dict>
+		</array>
 	</dict>
 </plist>

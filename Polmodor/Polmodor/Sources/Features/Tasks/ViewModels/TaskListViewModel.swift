@@ -22,6 +22,7 @@ final class TaskListViewModel: ObservableObject {
   @Published var showAddTask = false
   @Published var showFilterSheet = false
   @Published var showBatchActions = false
+  @Published var showSubscriptionPrompt = false
   @Published var selectedTasks = Set<UUID>()
   @Published var viewMode: ViewMode = .list
   @Published var sortOption: SortOption = .dateCreated
@@ -55,6 +56,10 @@ final class TaskListViewModel: ObservableObject {
 
   var completedTasks: [PolmodorTask] {
     allTasks.filter { $0.completed }
+  }
+
+  var tasks: [PolmodorTask] {
+    allTasks
   }
 
   var hasActiveFilters: Bool {

@@ -11,6 +11,8 @@ struct TaskListView: View {
   @StateObject private var viewModel = TaskListViewModel()
   @Query(sort: \PolmodorTask.createdAt, order: .reverse) private var allTasks: [PolmodorTask]
   @Query(sort: \TaskCategory.name) private var allCategories: [TaskCategory]
+  @State private var paywallManager = PaywallManager.shared
+  @State private var subscriptionManager = SubscriptionManager.shared
 
   var body: some View {
     NavigationStack {
@@ -35,6 +37,9 @@ struct TaskListView: View {
         }
         .presentationDetents([.large])
       }
+      .sheet(isPresented: $viewModel.showSubscriptionPrompt) {
+        SubscriptionView()
+      }
       .sheet(isPresented: $viewModel.showFilterSheet) {
         filterBottomSheet
           .presentationDetents([.medium, .large])
@@ -56,6 +61,15 @@ struct TaskListView: View {
       }
       .onChange(of: allCategories) { oldValue, newValue in
         viewModel.configure(modelContext: modelContext, allTasks: allTasks, allCategories: newValue)
+      }
+    }
+    // Modern RevenueCat Paywall Integration
+    .presentPolmodorPaywallWhen(viewModel.showSubscriptionPrompt)
+    .onChange(of: subscriptionManager.isPremium) { _, isPremium in
+      if isPremium {
+        // If user became premium, close the subscription prompt and allow adding task
+        viewModel.showSubscriptionPrompt = false
+        viewModel.showAddTask = true
       }
     }
   }
@@ -156,7 +170,11 @@ struct TaskListView: View {
 
         // Add Task
         Button {
-          viewModel.showAddTask = true
+          if subscriptionManager.canAddMoreTasks(currentTaskCount: viewModel.tasks.count) {
+            viewModel.showAddTask = true
+          } else {
+            viewModel.showSubscriptionPrompt = true
+          }
         } label: {
           Image(systemName: "plus")
             .font(.title3)
