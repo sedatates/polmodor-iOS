@@ -75,15 +75,11 @@ struct SettingsView: View {
 
                 Section("Timer Durations") {
                     Stepper(
-                        "Work: \(settings.workDuration) minutes",
+                        "Work: \(SettingsManager.shared.workDurationMinutes) minutes",
                         value: Binding(
-                            get: { settings.workDuration },
+                            get: { SettingsManager.shared.workDurationMinutes },
                             set: { newValue in
-                                settings.workDuration = newValue
-                                try? modelContext.save()
-                                NotificationCenter.default.post(
-                                    name: NSNotification.Name("SettingsChanged"), object: nil
-                                )
+                                SettingsManager.shared.updateWorkDuration(newValue)
                             }
                         ),
                         in: 15 ... 60,
@@ -92,15 +88,11 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
 
                     Stepper(
-                        "Short Break: \(settings.shortBreakDuration) minutes",
+                        "Short Break: \(SettingsManager.shared.shortBreakDurationMinutes) minutes",
                         value: Binding(
-                            get: { settings.shortBreakDuration },
+                            get: { SettingsManager.shared.shortBreakDurationMinutes },
                             set: { newValue in
-                                settings.shortBreakDuration = newValue
-                                try? modelContext.save()
-                                NotificationCenter.default.post(
-                                    name: NSNotification.Name("SettingsChanged"), object: nil
-                                )
+                                SettingsManager.shared.updateShortBreakDuration(newValue)
                             }
                         ),
                         in: 5 ... 15,
@@ -109,15 +101,11 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
 
                     Stepper(
-                        "Long Break: \(settings.longBreakDuration) minutes",
+                        "Long Break: \(SettingsManager.shared.longBreakDurationMinutes) minutes",
                         value: Binding(
-                            get: { settings.longBreakDuration },
+                            get: { SettingsManager.shared.longBreakDurationMinutes },
                             set: { newValue in
-                                settings.longBreakDuration = newValue
-                                try? modelContext.save()
-                                NotificationCenter.default.post(
-                                    name: NSNotification.Name("SettingsChanged"), object: nil
-                                )
+                                SettingsManager.shared.updateLongBreakDuration(newValue)
                             }
                         ),
                         in: 10 ... 30,
@@ -126,13 +114,11 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
 
                     Stepper(
-                        "Pomodoros Until Long Break: \(settings.pomodorosUntilLongBreak)",
+                        "Pomodoros Until Long Break: \(SettingsManager.shared.pomodorosUntilLongBreakCount)",
                         value: Binding(
-                            get: { settings.pomodorosUntilLongBreak },
+                            get: { SettingsManager.shared.pomodorosUntilLongBreakCount },
                             set: { newValue in
-                                settings.pomodorosUntilLongBreak = newValue
-                                try? modelContext.save()
-                                NotificationCenter.default.post(name: NSNotification.Name("SettingsChanged"), object: nil)
+                                SettingsManager.shared.updatePomodorosUntilLongBreak(newValue)
                             }
                         ),
                         in: 4 ... 10,
@@ -222,6 +208,9 @@ struct SettingsView: View {
             if isPremium {
                 showPaywallForUpgrade = false
             }
+        }
+        .onAppear {
+            SettingsManager.shared.configure(with: modelContext)
         }
     }
 }
