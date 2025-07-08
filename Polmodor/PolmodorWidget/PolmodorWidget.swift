@@ -10,6 +10,7 @@ import SwiftUI
 import WidgetKit
 
 // MARK: - Helper Extensions
+
 // Enum to match the app's Polmodoro state
 enum PomodoroState: String {
     case work = "Focus Time"
@@ -17,13 +18,14 @@ enum PomodoroState: String {
     case longBreak = "Long Break"
 
     var title: String {
-        return self.rawValue
+        return rawValue
     }
 }
 
 // Helper method for hex colors is now in the shared file as Color.hex
 
 // MARK: - Widget Entry
+
 struct PolmodorEntry: TimelineEntry {
     let date: Date
     let pomodoroState: PomodoroState
@@ -34,10 +36,11 @@ struct PolmodorEntry: TimelineEntry {
 }
 
 // MARK: - Widget Provider
+
 struct Provider: TimelineProvider {
     typealias Entry = PolmodorEntry
 
-    func placeholder(in context: Context) -> PolmodorEntry {
+    func placeholder(in _: Context) -> PolmodorEntry {
         PolmodorEntry(
             date: Date(),
             pomodoroState: .work,
@@ -48,7 +51,7 @@ struct Provider: TimelineProvider {
         )
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (PolmodorEntry) -> Void) {
+    func getSnapshot(in _: Context, completion: @escaping (PolmodorEntry) -> Void) {
         // Create a snapshot entry for the widget gallery
         let entry = PolmodorEntry(
             date: Date(),
@@ -61,7 +64,7 @@ struct Provider: TimelineProvider {
         completion(entry)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<PolmodorEntry>) -> Void) {
+    func getTimeline(in _: Context, completion: @escaping (Timeline<PolmodorEntry>) -> Void) {
         // Get the current timer state from UserDefaults
         let timerState = fetchTimerState()
 
@@ -72,7 +75,8 @@ struct Provider: TimelineProvider {
                 pomodoroState: timerState.pomodoroState,
                 timeRemaining: timerState.timeRemaining,
                 progress: calculateProgress(
-                    timeRemaining: timerState.timeRemaining, state: timerState.pomodoroState),
+                    timeRemaining: timerState.timeRemaining, state: timerState.pomodoroState
+                ),
                 taskTitle: timerState.taskTitle,
                 isRunning: false
             )
@@ -94,19 +98,22 @@ struct Provider: TimelineProvider {
                 pomodoroState: timerState.pomodoroState,
                 timeRemaining: timerState.timeRemaining,
                 progress: calculateProgress(
-                    timeRemaining: timerState.timeRemaining, state: timerState.pomodoroState),
+                    timeRemaining: timerState.timeRemaining, state: timerState.pomodoroState
+                ),
                 taskTitle: timerState.taskTitle,
                 isRunning: timerState.isRunning
             )
         )
 
         // Add future entries (one per minute)
-        for minuteOffset in 1...minutesRemaining {
+        for minuteOffset in 1 ... minutesRemaining {
             let entryDate = Calendar.current.date(
-                byAdding: .minute, value: minuteOffset, to: currentDate)!
+                byAdding: .minute, value: minuteOffset, to: currentDate
+            )!
             let remainingTime = max(0, timerState.timeRemaining - Double(minuteOffset * 60))
             let progress = calculateProgress(
-                timeRemaining: remainingTime, state: timerState.pomodoroState)
+                timeRemaining: remainingTime, state: timerState.pomodoroState
+            )
 
             let entry = PolmodorEntry(
                 date: entryDate,
@@ -122,7 +129,8 @@ struct Provider: TimelineProvider {
         // Add an entry for when the timer completes
         if minutesRemaining > 0 {
             let completionDate = Calendar.current.date(
-                byAdding: .second, value: Int(timerState.timeRemaining), to: currentDate)!
+                byAdding: .second, value: Int(timerState.timeRemaining), to: currentDate
+            )!
             let completionEntry = PolmodorEntry(
                 date: completionDate,
                 pomodoroState: timerState.pomodoroState,
@@ -147,7 +155,7 @@ struct Provider: TimelineProvider {
         // Get timer state with fallbacks to defaults
         let stateRawValue =
             defaults.string(forKey: "TimerStateManager.pomodoroState")
-            ?? PomodoroState.work.rawValue
+                ?? PomodoroState.work.rawValue
         let state = PomodoroState(rawValue: stateRawValue) ?? .work
         let timeRemaining = defaults.double(forKey: "TimerStateManager.timeRemaining")
         let isRunning = defaults.bool(forKey: "TimerStateManager.isRunning")
@@ -155,7 +163,7 @@ struct Provider: TimelineProvider {
         // Get task title if there's an active subtask
         var taskTitle = "Polmodor Timer"
         if let subtaskIDString = defaults.string(forKey: "TimerStateManager.activeSubtaskID"),
-            UUID(uuidString: subtaskIDString) != nil
+           UUID(uuidString: subtaskIDString) != nil
         {
             taskTitle =
                 defaults.string(forKey: "TimerStateManager.activeTaskTitle") ?? "Polmodor Timer"
@@ -193,6 +201,7 @@ struct Provider: TimelineProvider {
 }
 
 // MARK: - Widget Entry View
+
 struct PolmodorWidgetEntryView: View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) private var widgetFamily
@@ -275,6 +284,7 @@ struct PolmodorWidgetEntryView: View {
     }
 
     // MARK: - Custom Progress Bar
+
     struct ProgressBarView: View {
         let progress: Double
         let color: Color
@@ -359,6 +369,7 @@ struct PolmodorWidgetEntryView: View {
 }
 
 // MARK: - Widget Definition
+
 struct PolmodorWidget: Widget {
     let kind: String = "PolmodorWidget"
 
@@ -377,6 +388,7 @@ struct PolmodorWidget: Widget {
 }
 
 // MARK: - Preview
+
 #Preview(as: .systemSmall) {
     PolmodorWidget()
 } timeline: {

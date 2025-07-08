@@ -9,25 +9,30 @@ import Foundation
 import SwiftData
 
 @Model
-final class SettingsModel : ObservableObject {
+final class SettingsModel {
     // MARK: - Timer Settings
+
     var workDuration: Int = 25
     var shortBreakDuration: Int = 5
     var longBreakDuration: Int = 15
     var pomodorosUntilLongBreak: Int = 4
 
     // MARK: - Automation Settings
+
     var autoStartBreaks: Bool = false
     var autoStartPomodoros: Bool = false
 
     // MARK: - Notification Settings
+
     var isNotificationEnabled: Bool = true
     var isSoundEnabled: Bool = true
 
     // MARK: - Appearance Settings
+
     var isDarkModeEnabled: Bool = false
 
     // MARK: - Initializer
+
     init(
         workDuration: Int = 25,
         shortBreakDuration: Int = 5,
@@ -52,6 +57,7 @@ final class SettingsModel : ObservableObject {
 }
 
 // MARK: - Convenience Methods
+
 extension SettingsModel {
     /// Reset all settings to their default values
     func resetToDefaults() {

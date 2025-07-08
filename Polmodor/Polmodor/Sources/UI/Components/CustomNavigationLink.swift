@@ -8,24 +8,24 @@
 import SwiftUI
 
 struct CustomNavigationLink<D: View, L: View>: View {
-  @ViewBuilder var destination: () -> D
-  @ViewBuilder var label: () -> L
+    @ViewBuilder var destination: () -> D
+    @ViewBuilder var label: () -> L
 
-  @State private var isActive = false
+    @State private var isActive = false
 
-  var body: some View {
-    Button {
-      withAnimation {
-        isActive = true
-      }
-    } label: {
-      label()
+    var body: some View {
+        Button {
+            withAnimation {
+                isActive = true
+            }
+        } label: {
+            label()
+        }
+        .onAppear {
+            isActive = false
+        }
+        .navigationDestination(isPresented: $isActive) {
+            destination()
+        }
     }
-    .onAppear {
-      isActive = false
-    }
-    .navigationDestination(isPresented: $isActive) {
-      destination()
-    }
-  }
 }

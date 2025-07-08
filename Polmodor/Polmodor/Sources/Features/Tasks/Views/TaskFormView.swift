@@ -36,7 +36,7 @@ struct TaskFormView: View {
                 Section("Task Details") {
                     TextField("Title", text: $title)
                     TextField("Description", text: $taskDescription, axis: .vertical)
-                        .lineLimit(3...6)
+                        .lineLimit(3 ... 6)
                 }
 
                 Section("Icon") {
@@ -70,7 +70,7 @@ struct TaskFormView: View {
                     Stepper(
                         "Time Required: \(Int(timeRemaining / 60)) minutes",
                         value: $timeRemaining,
-                        in: 5 * 60...120 * 60,
+                        in: 5 * 60 ... 120 * 60,
                         step: 5 * 60
                     )
                 }

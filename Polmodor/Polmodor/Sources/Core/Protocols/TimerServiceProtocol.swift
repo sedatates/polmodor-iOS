@@ -30,7 +30,7 @@ class TimerService: TimerServiceProtocol {
     private var backgroundTime: Date?
 
     init() {
-        self.timeRemaining = PomodoroState.work.duration
+        timeRemaining = PomodoroState.work.duration
         #if os(iOS)
             setupNotifications()
         #endif

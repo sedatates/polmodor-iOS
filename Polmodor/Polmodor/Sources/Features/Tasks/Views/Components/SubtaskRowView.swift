@@ -1,5 +1,5 @@
 //
-//  SubtaskProgressView.swift
+//  SubtaskRowView.swift
 //  Polmodor
 //
 //  Created by sedat ateş on 27.02.2025.
@@ -10,8 +10,8 @@ import SwiftData
 import SwiftUI
 import UIKit
 
-
 // MARK: - Subtask Row View
+
 struct SubtaskRowView: View {
     let subtask: PolmodorSubTask
     @Environment(\.colorScheme) private var colorScheme
@@ -54,7 +54,7 @@ struct SubtaskRowView: View {
                 if !isCompleted {
                     if isActiveSubtask {
                         // Clear the active subtask - fix the nil passing style
-                        timerViewModel.setActiveSubtask(nil)
+                        timerViewModel.activeSubtaskID = nil
 
                         // Provide haptic feedback when clearing task
                         #if os(iOS)
@@ -63,7 +63,7 @@ struct SubtaskRowView: View {
                         #endif
                     } else {
                         // Set this as the active subtask - no need for if let since id is not optional
-                        timerViewModel.setActiveSubtask(subtask.id)
+                        timerViewModel.activeSubtaskID = subtask.id
 
                         // Provide stronger haptic feedback when setting active task
                         #if os(iOS)
@@ -94,7 +94,8 @@ struct SubtaskRowView: View {
             .disabled(isCompleted)
             // Highlight the active task button more prominently
             .shadow(
-                color: isActiveSubtask ? Color.orange.opacity(0.4) : .clear, radius: 3, x: 0, y: 1)
+                color: isActiveSubtask ? Color.orange.opacity(0.4) : .clear, radius: 3, x: 0, y: 1
+            )
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -115,7 +116,7 @@ struct SubtaskRowView: View {
     private func completeSubtask() {
         // If the task is completed, it should no longer be the active task
         if timerViewModel.activeSubtaskID == subtask.id {
-            timerViewModel.setActiveSubtask(nil)
+            timerViewModel.activeSubtaskID = nil
         }
 
         // Update our local state for immediate UI feedback
@@ -136,6 +137,7 @@ struct SubtaskRowView: View {
 }
 
 // MARK: - Preview
+
 #Preview {
     // Mock setup for preview
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
@@ -143,7 +145,7 @@ struct SubtaskRowView: View {
 
     let timerViewModel = TimerViewModel()
 
-    return VStack {
+    VStack {
         SubtaskRowView(subtask: PolmodorTask.mockTasks[0].subTasks[0])
         SubtaskRowView(subtask: PolmodorTask.mockTasks[0].subTasks[1])
     }

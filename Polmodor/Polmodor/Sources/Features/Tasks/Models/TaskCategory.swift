@@ -14,7 +14,7 @@ final class TaskCategory: Identifiable {
         self.id = id
         self.name = name
         self.iconName = iconName
-        self.colorHex = color.toHex() ?? "#0000FF"  // varsayılan mavi
+        colorHex = color.toHex() ?? "#0000FF" // varsayılan mavi
     }
 
     // Color için computed property

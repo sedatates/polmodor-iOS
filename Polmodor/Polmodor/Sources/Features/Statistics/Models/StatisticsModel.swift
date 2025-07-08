@@ -9,7 +9,7 @@ final class StatisticsModel {
     var totalFocusTime: TimeInterval // in seconds
     var completedTasks: Int
     var category: String?
-    
+
     init(
         id: UUID = UUID(),
         date: Date = Date(),
@@ -28,6 +28,7 @@ final class StatisticsModel {
 }
 
 // MARK: - Statistics Data Structure
+
 struct StatisticsData {
     let totalPomodoros: Int
     let totalFocusTime: TimeInterval
@@ -36,7 +37,7 @@ struct StatisticsData {
     let dailyStats: [DailyStatistics]
     let weeklyStats: [WeeklyStatistics]
     let categoryStats: [CategoryStatistics]
-    
+
     var formattedFocusTime: String {
         let hours = Int(totalFocusTime) / 3600
         let minutes = Int(totalFocusTime) % 3600 / 60
@@ -49,7 +50,7 @@ struct DailyStatistics {
     let pomodoros: Int
     let focusTime: TimeInterval
     let tasks: Int
-    
+
     var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM dd"
@@ -62,7 +63,7 @@ struct WeeklyStatistics {
     let pomodoros: Int
     let focusTime: TimeInterval
     let tasks: Int
-    
+
     var formattedWeek: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM dd"
@@ -77,6 +78,6 @@ struct CategoryStatistics {
     let focusTime: TimeInterval
     let tasks: Int
     let color: String
-    
+
     var percentage: Double = 0.0
-} 
+}

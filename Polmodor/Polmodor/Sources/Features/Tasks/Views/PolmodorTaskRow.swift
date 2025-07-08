@@ -10,47 +10,47 @@ import SwiftData
 import SwiftUI
 
 // MARK: - Task Row View
+
 struct PolmodorTaskRow: View {
     let task: PolmodorTask
     @State private var isExpanded = false
     @State private var showAddSubtask = false
     @Namespace private var animation
     @Environment(\.colorScheme) private var colorScheme
-    
-    
+
     // Animation properties
     @State private var cardHeight: CGFloat = 0
     @State private var subtaskOpacity: Double = 0
-    
+
     private var backgroundColor: Color {
         colorScheme == .dark ? Color(white: 0.10) : Color.white
     }
-    
+
     private var accentColor: Color {
         task.category?.color ?? .blue
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Main task card
             VStack(spacing: 0) {
                 // Task header
                 PolmodorTaskHeader(task: task, accentColor: Color.accentColor, isExpanded: $isExpanded)
-                
+
                 // PolmodorTaskInfoRow
                 PolmodorTaskInfoRow(task: task)
-                
+
                 // Subtask progress indicator
                 TaskProgressRowView(task: task)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
-                
+
                 if isExpanded {
                     // Subtasks section (expanded)
                     Divider()
                         .padding(.horizontal, 16)
                         .transition(.opacity.combined(with: .move(edge: .top)))
-                    
+
                     PolmodorTaskExpandedView(
                         task: task,
                         accentColor: accentColor,
@@ -68,7 +68,7 @@ struct PolmodorTaskRow: View {
             )
             .contentShape(Rectangle())
         }
-        
+
         .sheet(isPresented: $showAddSubtask) {
             SubTaskAddView(task: task)
                 .presentationDetents([.medium])
@@ -78,29 +78,23 @@ struct PolmodorTaskRow: View {
             NavigationLink(destination: TaskDetailView(task: task)) {
                 Label("View Details", systemImage: "info.circle")
             }
-            
+
             if !task.completed {
                 Button {
                     // Mark as completed logic
                 } label: {
                     Label("Complete", systemImage:
-                            "checkmark.circle")
+                        "checkmark.circle")
                 }
             }
-            
+
             Button(role: .destructive) {
                 // Delete task logic
             } label: {
                 Label("Delete", systemImage: "trash")
             }
         }
-        
-        
     }
-    
-    
-    
-    
 }
 
 struct TaskRowView_Previews: PreviewProvider {
@@ -110,7 +104,6 @@ struct TaskRowView_Previews: PreviewProvider {
                 PolmodorTaskRow(task: task)
                     .padding(.horizontal)
             }
-            
         }
     }
 }

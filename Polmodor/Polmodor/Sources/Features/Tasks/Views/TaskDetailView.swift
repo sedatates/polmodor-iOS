@@ -12,10 +12,10 @@ struct TaskDetailView: View {
 
     var body: some View {
         List {
-            Section{
+            Section {
                 TextField("Title", text: $task.title)
                 TextField("Description", text: $task.taskDescription, axis: .vertical)
-                    .lineLimit(3...6)
+                    .lineLimit(3 ... 6)
 
                 Picker("Category", selection: $task.category) {
                     ForEach(categories) { category in
@@ -147,7 +147,6 @@ struct TaskDetailView: View {
         try? modelContext.save()
     }
 }
-
 
 #Preview {
     do {

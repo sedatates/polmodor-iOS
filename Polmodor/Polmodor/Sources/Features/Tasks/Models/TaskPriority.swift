@@ -1,5 +1,5 @@
-import SwiftUI
 import Foundation
+import SwiftUI
 
 enum TaskPriority: String, Codable, CaseIterable, Hashable {
     case low
@@ -16,7 +16,7 @@ enum TaskPriority: String, Codable, CaseIterable, Hashable {
             return .red
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .low:

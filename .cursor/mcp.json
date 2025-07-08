@@ -2,6 +2,9 @@
   "mcpServers": {
     "polmodor-iOS Docs": {
       "url": "https://gitmcp.io/sedatates/polmodor-iOS"
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp"
     }
   }
 }

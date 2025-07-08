@@ -1,12 +1,8 @@
 import Foundation
 import SwiftUI
 
-#if os(iOS)
-    import UIKit
-#endif
-
 enum Constants {
-    enum Theme : String, CaseIterable {
+    enum Theme: String, CaseIterable {
         case light = "Light"
         case dark = "Dark"
         case system = "System"
@@ -23,15 +19,13 @@ enum Constants {
         }
     }
 
-        
-    
     enum Timer {
-        static let minimumWorkDuration: TimeInterval = 15 * 60  // 15 minutes
-        static let maximumWorkDuration: TimeInterval = 60 * 60  // 60 minutes
-        static let minimumShortBreakDuration: TimeInterval = 3 * 60  // 3 minutes
-        static let maximumShortBreakDuration: TimeInterval = 15 * 60  // 15 minutes
-        static let minimumLongBreakDuration: TimeInterval = 10 * 60  // 10 minutes
-        static let maximumLongBreakDuration: TimeInterval = 30 * 60  // 30 minutes
+        static let minimumWorkDuration: TimeInterval = 15 * 60 // 15 minutes
+        static let maximumWorkDuration: TimeInterval = 60 * 60 // 60 minutes
+        static let minimumShortBreakDuration: TimeInterval = 3 * 60 // 3 minutes
+        static let maximumShortBreakDuration: TimeInterval = 15 * 60 // 15 minutes
+        static let minimumLongBreakDuration: TimeInterval = 10 * 60 // 10 minutes
+        static let maximumLongBreakDuration: TimeInterval = 30 * 60 // 30 minutes
         static let minimumPomodorosUntilLongBreak = 2
         static let maximumPomodorosUntilLongBreak = 6
     }
@@ -70,13 +64,4 @@ enum Constants {
         static let privacy = "https://github.com/yourusername/polmodor/blob/main/PRIVACY.md"
         static let license = "https://github.com/yourusername/polmodor/blob/main/LICENSE"
     }
-
-    #if os(iOS)
-        enum Haptics {
-            static let light = UIImpactFeedbackGenerator(style: .light)
-            static let medium = UIImpactFeedbackGenerator(style: .medium)
-            static let heavy = UIImpactFeedbackGenerator(style: .heavy)
-            static let success = UINotificationFeedbackGenerator()
-        }
-    #endif
 }
